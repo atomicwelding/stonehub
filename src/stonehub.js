@@ -60,7 +60,7 @@ class Stonehub {
 
     message_handler(e, that) {
         let msg = e.data;
-        msg = msg.match(/^[0-9]+(\[.+)$/)[1];
+        msg = (msg.match(/^[0-9]+(\[.+)$/) || [])[1];
         if(msg != null){
             let msg_parsed = JSON.parse(msg);
             let [r, data] = msg_parsed;
