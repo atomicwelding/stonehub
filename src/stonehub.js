@@ -9,56 +9,65 @@
 // @grant        none
 // ==/UserScript==
 
-// setInterval(() => {
-//     sockets[0].send('42["send message",{"channel_id":116,"channel_name":"1825","message":"si vous recevez ce message cest que ça marche lol","type":"channel"}]');
-// }, 5000);
-
-// let updateLoop = () => {
-//         let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
-        
-//         // remove the runecrafting alert
-//         marketplace_buy_info.removeChild(document.getElementsByClassName('runecrafting-info')[0]);
-
-//         // add 'Orders' button
-//         let order_button = document.createElement('button');
-//         order_button.className = 'marketplace-back-button';
-//         order_button.innerHTML = 'Orders';
-//         marketplace_buy_info.insertBefore(order_button, document.getElementById('marketplace-refresh-button'));
-//         //marketplace_buy_info.insertAdjacentHTML('beforeend', '<button class="marketplace-back-button">Orders</button>');
-// };
-
-// setInterval(updateLoop, 1000);
-
-
-// TODO LIST 
-// : FAIRE LA DOC
-
 class Stonehub {
+    
+    /**
+     * Stonehub is a tampermonkey extension ; its purpose is to add some QoL on the marketplace.
+     * This works by hooking the current running socket and make simple call to the server.
+     */
 
     constructor() {
-        // the dict stores all the corresponding msg / method to execute the action
-        this.message_to_action = {
+        
+        /**
+         * This dictionnary embed all the pair event-methods.
+         * You can easily implement new corresponding methods by adding the event as the key, and a reference the right method. 
+         */
+        this.event_to_action = {
             "get market manifest":this.add_order_tab_action,
             "get player marketplace items":this.convenients_marketplace_items_action
         };
 
-        this.auto_refresh_time = 1000;
+        // some macros
+        this.socket_latency     = 1000;
+        this.auto_refresh_time  = 1000;
+        
         this.sockets = [];
+
+        /**
+         * Simple flag system to limit the number of requests used
+         * It may be improved later.
+         */
+        this.flags = {
+            "watchingItem":false
+        }
     }
 
     message_handler(that, e) {
+        /**
+         * Here is the message handler.
+         * When a new websocket message is emitted from the server
+         * the extension hooks it and call the desired methods.
+         * Check out this.event_to_action.
+         * 
+         * All the methods are called with a reference to this/that and the datas the game threw.
+         * Please keep at least a reference to that when creating a new method.
+         */
         let msg = e.data;
         msg = (msg.match(/^[0-9]+(\[.+)$/) || [])[1];
         if(msg != null){
             let msg_parsed = JSON.parse(msg);
             let [r, data] = msg_parsed;
 
-            // if the msg is stored in message_to_action, execute the function
-            if(r in that.message_to_action) that.message_to_action[r](that, data);
+            // if the event is stored in event_to_action, execute the function
+            if(r in that.event_to_action) that.event_to_action[r](that, data);
         }
     }
 
     start() {
+        /**
+         * Main part of the extension
+         */
+
         // keeping the track of this, since changing the scope of the function modify it.
         var that = this;
         
@@ -74,17 +83,27 @@ class Stonehub {
 
         // better idea than timeout? "(sockets != null || timeout(100))"
         setTimeout(() => {
+            /**
+             * A listener is created to catch messages emitted by the server through the websocket.
+             */
             this.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
-        }, 1000);
+        },  this.socket_latency);
 
     } 
 }
 
 Stonehub.prototype.add_order_tab_action = function(that) {
-    // A REVOIR 
+    /**
+     * The method add an order tab to the main page of the marketplace. But the whole function should be seen as the place
+     * to manage the marketplace and not just for the order tab. Please rename the function
+     */
+    
+    // since you're watching the whole market, deactivate the watchingItem flag
+    that.flags.watchingItem = false;
+    
     let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
     
-    // remove the runecrafting alert
+    // remove the runecrafting banner
     marketplace_buy_info.removeChild(document.getElementsByClassName('runecrafting-info')[0]);
 
     // add 'Orders' button
@@ -96,14 +115,27 @@ Stonehub.prototype.add_order_tab_action = function(that) {
 }
 
 Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
-    setTimeout(() => {
-        that.sockets[0].send('42["get player marketplace items",'+data[0].itemID+']');
-    }, 2000)
+    /**
+     * This method add some convenients and small adjustements to an item page.
+     * Current features : 
+     *      Autorefresh
+     */
+
+    // since you're watching the page, make the flag up
+    that.flags.watchingItem = true;
+    
+    // not very clean but the feature intended here is autorefresh
+    let clr = setTimeout(() => {
+        // we use the flags here to limit the number of requests, server load.
+        if(that.flags.watchingItem)
+            that.sockets[0].send('42["get player marketplace items",'+data[0].itemID+']');
+        else
+            clearTimeout(clr);           
+    }, this.auto_refresh_time)
 }
 
 
-// ==== MAIN ====/
-
+// ==== MAIN ==== //
 let sh = new Stonehub(); sh.start();
 
 
