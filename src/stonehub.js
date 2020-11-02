@@ -120,6 +120,9 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
      * This method add some convenients and small adjustements to an item page.
      * Current features : 
      *      Autorefresh
+     *  BUG : 
+     *      queueing is not working since the method is called at each request emitted here
+     *      so we're hard spamming request and the timeout doesn't help
      */
 
     // since you're watching the page, make the flag up
@@ -128,37 +131,52 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
     // not very clean but the feature intended here is autorefresh
     let clr = setTimeout(() => {
         // we use the flags here to limit the number of requests, server load.
-        if(that.flags.watchingItem)
+        if(that.flags.watchingItem){
             that.sockets[0].send('42["get player marketplace items",'+data[0].itemID+']');
+        }
         else
             clearTimeout(clr);           
     }, this.auto_refresh_time)
 }
 
 Stonehub.prototype.convenients_sell_item_action = function(that, data) {
+    /**
+     * This method add some convenients and small adjustements to the sell page.
+     * Current features : 
+     *
+     */
     let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tr');
-    
-    let modify_auction_button = document.createElement('td');
-    modify_auction_button.innerHTML = '+';
     let auction_table_tbody_ar= Array.prototype.slice.call(auction_table_tbody);
     auction_table_tbody_ar.shift();
+    
+    // for each auction in the table
     auction_table_tbody_ar.forEach(element => {
-        let modify_auction_button = document.createElement('td');
-        modify_auction_button.addEventListener('click', () => alert('lol'));
-        
-        let modify_auction_img    = document.createElement('img');
-        modify_auction_img.src    = 'https://idlescape.com/images/mining/stone.png';
-        modify_auction_button.appendChild(modify_auction_img);
-        
-        element.appendChild(modify_auction_button);
+        // check if button doesn't already exist
+        if(element.getElementsByClassName('modify_auction_button').length == 0) {
+            
+            // add button
+            let modify_auction_button = document.createElement('td');
+            modify_auction_button.className = 'modify_auction_button';
+
+            // add the image
+            let modify_auction_img    = document.createElement('img');
+            modify_auction_img.src    = 'https://idlescape.com/images/mining/stone.png';
+            modify_auction_button.appendChild(modify_auction_img);
+
+            modify_auction_button.addEventListener('click', () => alert('igo la vie est moche'));
+            element.appendChild(modify_auction_button);
+        }
     });
-    
-    
-    // auction_table_tbody.appendChild()
 }
 
 // ==== MAIN ==== //
-let sh = new Stonehub(); sh.start();
+
+try {
+    let sh = new Stonehub(); sh.start();
+} catch (e) {
+    console.log(e)
+}
+
 
 
 
