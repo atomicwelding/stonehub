@@ -24,7 +24,8 @@ class Stonehub {
          */
         this.event_to_action = {
             "get market manifest":this.add_order_tab_action,
-            "get player marketplace items":this.convenients_marketplace_items_action
+            "get player marketplace items":this.convenients_marketplace_items_action,
+            "get player auctions":this.convenients_sell_item_action 
         };
 
         // some macros
@@ -75,7 +76,6 @@ class Stonehub {
         /* Handle the current running socket */
         const nativeWebSocket = window.WebSocket;
         window.WebSocket = function(...args){
-            console.log('ahi');
             const socket = new nativeWebSocket(...args);
             that.sockets.push(socket);
             return socket;
@@ -135,6 +135,9 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
     }, this.auto_refresh_time)
 }
 
+Stonehub.prototype.convenients_sell_item_action = function(that, data) {
+    console.log(data);
+}
 
 // ==== MAIN ==== //
 let sh = new Stonehub(); sh.start();
