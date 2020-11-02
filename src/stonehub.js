@@ -136,7 +136,25 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
 }
 
 Stonehub.prototype.convenients_sell_item_action = function(that, data) {
-    console.log(data);
+    let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tr');
+    
+    let modify_auction_button = document.createElement('td');
+    modify_auction_button.innerHTML = '+';
+    let auction_table_tbody_ar= Array.prototype.slice.call(auction_table_tbody);
+    auction_table_tbody_ar.shift();
+    auction_table_tbody_ar.forEach(element => {
+        let modify_auction_button = document.createElement('td');
+        modify_auction_button.addEventListener('click', () => alert('lol'));
+        
+        let modify_auction_img    = document.createElement('img');
+        modify_auction_img.src    = 'https://idlescape.com/images/mining/stone.png';
+        modify_auction_button.appendChild(modify_auction_img);
+        
+        element.appendChild(modify_auction_button);
+    });
+    
+    
+    // auction_table_tbody.appendChild()
 }
 
 // ==== MAIN ==== //
