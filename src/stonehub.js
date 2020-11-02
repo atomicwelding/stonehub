@@ -110,6 +110,7 @@ Stonehub.prototype.add_order_tab_action = function(that) {
     let order_button = document.createElement('button');
     order_button.className = 'marketplace-back-button';
     order_button.innerHTML = 'Orders';
+    order_button.title     = 'Not implemented yet';
     marketplace_buy_info.insertBefore(order_button, document.getElementById('marketplace-refresh-button'));
 
 }
