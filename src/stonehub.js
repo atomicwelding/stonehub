@@ -38,7 +38,8 @@ class Stonehub {
     constructor() {
         // the dict stores all the corresponding msg / method to execute the action
         this.message_to_action = {
-            "get market manifest":this.add_order_tab_action
+            "get market manifest":this.add_order_tab_action,
+            "get player marketplace items":this.convenients_marketplace_items_action
         };
 
         this.auto_refresh_time = 1000;
@@ -92,6 +93,12 @@ Stonehub.prototype.add_order_tab_action = function(that) {
     order_button.innerHTML = 'Orders';
     marketplace_buy_info.insertBefore(order_button, document.getElementById('marketplace-refresh-button'));
 
+}
+
+Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
+    setTimeout(() => {
+        that.sockets[0].send('42["get player marketplace items",'+data[0].itemID+']');
+    }, 2000)
 }
 
 
