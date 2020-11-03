@@ -264,7 +264,6 @@ function waitingUpdate(rawId, timeout = 10000) {
         // reasonable amount of time, the promise will reject
         timer = setTimeout(() => {
             reject(new Error("timeout waiting for msg"));
-            ws.removeListener('msg', responseHandler);
         }, timeout);
 
     });
