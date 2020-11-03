@@ -12,29 +12,32 @@
 // todo : mieux gérer les flags, bug queue, ajouter gestion d'erreur
 
 class Stonehub {
-    
+
     /**
      * Stonehub is a tampermonkey extension ; its purpose is to add some QoL on the marketplace.
      * This works by hooking the current running socket and make simple call to the server.
      */
 
     constructor() {
-        
+
         /**
          * This dictionnary embed all the pair event-methods.
-         * You can easily implement new corresponding methods by adding the event as the key, and a reference the right method. 
+         * You can easily implement new corresponding methods by adding the event as the key, and a reference the right method.
          */
         this.event_to_action = {
             "get market manifest":this.add_order_tab_action,
             "get player marketplace items":this.convenients_marketplace_items_action,
-            "get player auctions":this.convenients_sell_item_action
+            "get player auctions":this.convenients_sell_item_action,
+			"update inventory":this.updateInventory;
         };
 
         // some macros
         this.socket_latency     = 1000;
         this.auto_refresh_time  = 1000;
-        
+
         this.sockets = [];
+        this.itemId = -1;
+        this.rawId = -1;
 
         /**
          * Simple flag system to limit the number of requests used
@@ -52,7 +55,7 @@ class Stonehub {
          * When a new websocket message is emitted from the server
          * the extension hooks it and call the desired methods.
          * Check out this.event_to_action.
-         * 
+         *
          * All the methods are called with a reference to this/that and the datas the game threw.
          * Please keep at least a reference to that when creating a new method.
          */
@@ -82,14 +85,14 @@ class Stonehub {
 
         //     alert('ahi');
         //     // let navbar = document.getElementsByClassName('nav-drawer-container');
-        
+
         //     // let stonehub_status = document.createElement('div');
         //     // stonehub_status.innerHTML = 'Stonehub is online';
         //     // stonehub_status.className = 'drawer-item noselect';
         //     // navbar.insertBefore(stonehub_status, navbar.children[2]);
 
         // });
-        
+
         /* src: https://stackoverflow.com/questions/59915987/get-active-websockets-of-a-website-possible */
         /* Handle the current running socket */
         const nativeWebSocket = window.WebSocket;
@@ -105,9 +108,13 @@ class Stonehub {
              * A listener is created to catch messages emitted by the server through the websocket.
              */
             this.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
+
+
+
+                waitingUpdate(this.sockets[0]);
         },  this.socket_latency);
 
-    } 
+    }
 }
 
 Stonehub.prototype.add_order_tab_action = function(that) {
@@ -115,14 +122,14 @@ Stonehub.prototype.add_order_tab_action = function(that) {
      * The method add an order tab to the main page of the marketplace. But the whole function should be seen as the place
      * to manage the marketplace and not just for the order tab. Please rename the function
      */
-    
+
     // since you're watching the whole market, deactivate the other flags
     that.flags.watchingItem = false;
     that.flags.watchingAuction = false;
-    
+
     // ==== ORDER BUTTON ==== //
     let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
-    
+
     // remove the runecrafting banner
     marketplace_buy_info.removeChild(document.getElementsByClassName('runecrafting-info')[0]);
 
@@ -138,9 +145,9 @@ Stonehub.prototype.add_order_tab_action = function(that) {
 Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
     /**
      * This method add some convenients and small adjustements to an item page.
-     * Current features : 
+     * Current features :
      *      Autorefresh
-     *  BUG : 
+     *  BUG :
      *      queueing is not working since the method is called at each request emitted here
      *      so we're hard spamming request and the timeout doesn't help
      */
@@ -148,7 +155,7 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
     // since you're watching the page, make the flag up and deactivate others
     that.flags.watchingItem = true;
     that.flags.watchingAuction = false;
-    
+
     // ==== AUTOREFRESH ==== //
     // not very clean
     let clr = setTimeout(() => {
@@ -157,7 +164,7 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
             that.sockets[0].send('42["get player marketplace items",'+data[0].itemID+']');
         }
         else
-            clearTimeout(clr);           
+            clearTimeout(clr);
     }, that.auto_refresh_time);
 }
 
@@ -219,15 +226,15 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id) {
                 // that.sockets[0].send('42["cancel my auction",'+id+']');
 
                 // make a new auction
-                let amount = document.getElementById('amount').value;
-                let price  = document.getElementById('price').getAttribute('value');
-                
+                //let amount = document.getElementById('amount').value;
+                //let price  = document.getElementById('price').getAttribute('value');
+
                 console.log(data);
                 // console.log('42["cancel my auction",'+id+']');
                 // console.log('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+id+'}]');
 
                 console.log('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+id+'}]');
-                that.sockets[0].send('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+id+'}]');
+               // that.sockets[0].send('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+id+'}]');
 
                 // close popup
                 document.getElementById('modify_auction_popup').outerHTML = '';
@@ -236,10 +243,37 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id) {
     });
 }
 
+// Update inventory with new datas
+Stonehub.prototype.update_inventory(that, data) {
+	// Retrouver rawid et item id depuis le data
+	
+    this.rawId = rawId;
+	this.itemId = itemId;
+}
+
+// Promise waiting the for update_inventory
+function waitingUpdate(rawId, timeout = 10000) {
+    return new Promise((resolve, reject) => {
+        let timer;
+		
+		if (this.rawId == rawId) {
+			resolve(this.itemId);
+		}
+
+        // set timeout so if a response is not received within a
+        // reasonable amount of time, the promise will reject
+        timer = setTimeout(() => {
+            reject(new Error("timeout waiting for msg"));
+            ws.removeListener('msg', responseHandler);
+        }, timeout);
+
+    });
+}
+
 Stonehub.prototype.convenients_sell_item_action = function(that, data) {
     /**
      * This method add some convenients and small adjustements to the sell page.
-     * Current features : 
+     * Current features :
      *      Button added for further features
      *      Autorefresh when someone bought the item
      */
@@ -256,7 +290,7 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
             that.sockets[0].send('42["get player auctions",[]]');
         }
         else
-            clearTimeout(clr);           
+            clearTimeout(clr);
     }, that.auto_refresh_time);
 
 
@@ -264,7 +298,7 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
     let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tr');
     let auction_table_tbody_ar= Array.prototype.slice.call(auction_table_tbody);
     auction_table_tbody_ar.shift();
-    
+
     // for each auction in the table
     auction_table_tbody_ar.forEach((element, index) => {
         // check if button doesn't already exist
@@ -298,7 +332,3 @@ try {
 } catch (e) {
     console.log(e)
 }
-
-
-
-
