@@ -22,13 +22,13 @@ class Stonehub {
 
         /**
          * This dictionnary embed all the pair event-methods.
-         * You can easily implement new corresponding methods by adding the event as the key, and a reference the right method.
+         * You can easily implement new corresponding methods by adding the event as the key, and a reference to the right method.
          */
         this.event_to_action = {
             "get market manifest":this.add_order_tab_action,
             "get player marketplace items":this.convenients_marketplace_items_action,
             "get player auctions":this.convenients_sell_item_action,
-			"update inventory":this.updateInventory;
+			"update inventory":this.update_inventory_action
         };
 
         // some macros
@@ -36,8 +36,11 @@ class Stonehub {
         this.auto_refresh_time  = 1000;
 
         this.sockets = [];
-        this.itemId = -1;
-        this.rawId = -1;
+        
+        this.itemID = -1;
+        this.inventory_item_id = -1;
+
+        this.waiting_inventory_update_timeout = 10000;
 
         /**
          * Simple flag system to limit the number of requests used
@@ -108,10 +111,7 @@ class Stonehub {
              * A listener is created to catch messages emitted by the server through the websocket.
              */
             this.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
-
-
-
-                waitingUpdate(this.sockets[0]);
+            // waitingUpdate(this.sockets[0]);
         },  this.socket_latency);
 
     }
@@ -168,7 +168,7 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
     }, that.auto_refresh_time);
 }
 
-Stonehub.prototype.show_popup_sell_item = function(that, data, id) {
+Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inventory_item_id) {
 
     // GEO, CEST ICI QUE CA SE PASSE
 
@@ -223,18 +223,24 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id) {
             break;
             case document.getElementById('sell_button'):
                 // cancel auction
-                // that.sockets[0].send('42["cancel my auction",'+id+']');
+                that.sockets[0].send('42["cancel my auction",'+id+']');
+
+                // 
+                that.waiting_inventory_update(that, itemID)
+                    .then(tosell_id => {
+                        that.sockets[0].send('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+tosell_id+'}]');
+                    })
 
                 // make a new auction
                 //let amount = document.getElementById('amount').value;
                 //let price  = document.getElementById('price').getAttribute('value');
 
-                console.log(data);
+                //console.log(data);
                 // console.log('42["cancel my auction",'+id+']');
                 // console.log('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+id+'}]');
 
-                console.log('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+id+'}]');
-               // that.sockets[0].send('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+id+'}]');
+                //console.log('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+id+'}]');
+                // that.sockets[0].send('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+id+'}]');
 
                 // close popup
                 document.getElementById('modify_auction_popup').outerHTML = '';
@@ -243,28 +249,30 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id) {
     });
 }
 
-// Update inventory with new datas
-Stonehub.prototype.update_inventory(that, data) {
-	// Retrouver rawid et item id depuis le data
-	
-    this.rawId = rawId;
-	this.itemId = itemId;
+Stonehub.prototype.update_inventory_action = function(that, data) {
+    /**
+     * Update 2 memvars, see waiting_inventory_update for use
+     */
+    // /!\ there are 3 items ID
+    // id, inventory_item_id and itemID
+    this.itemID = data.item.itemID;
+	this.inventory_item_id = data.item.inventory_item_id;
 }
 
-// Promise waiting the for update_inventory
-function waitingUpdate(rawId, timeout = 10000) {
+Stonehub.prototype.waiting_inventory_update = function(that, itemID) {
+    /**
+     * Promise waiting for update_inventory
+     */
     return new Promise((resolve, reject) => {
-        let timer;
-		
-		if (this.rawId == rawId) {
-			resolve(this.itemId);
+		if (that.itemID == itemID) {
+			resolve(that.inventory_item_id);
 		}
 
         // set timeout so if a response is not received within a
         // reasonable amount of time, the promise will reject
-        timer = setTimeout(() => {
+        let timer = setTimeout(() => {
             reject(new Error("timeout waiting for msg"));
-        }, timeout);
+        }, that.waiting_inventory_update_timeout);
 
     });
 }
@@ -306,9 +314,9 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
             // add button
             let modify_auction_button = document.createElement('td');
             modify_auction_button.className = 'modify_auction_button';
-            modify_auction_button.id = data[index].id;
+            modify_auction_button.id = data[index].itemID;
 
-            console.log(index+': '+data[index].id);
+            console.log(index +': '+data[index].itemID);
 
             // add the image
             let modify_auction_img    = document.createElement('img');
@@ -317,7 +325,7 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
 
             // listener, popup
             modify_auction_button.addEventListener('click', () => {
-                that.show_popup_sell_item(that, data, data[index].id);
+                that.show_popup_sell_item(that, data, data[index].id, data[index].itemID, data[index].inventory_item_id);
             });
             element.appendChild(modify_auction_button);
         }
