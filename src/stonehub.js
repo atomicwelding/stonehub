@@ -33,6 +33,8 @@ class Stonehub {
         
         this.sockets = [];
 
+        this.stonehub_version = "V1.0.0"
+
         /**
          * Simple flag system to limit the number of requests used
          * It may be improved later.
@@ -94,7 +96,7 @@ class Stonehub {
             var usersOnlineDiv = document.getElementById("usersOnline");
             var spantext = document.createElement('span');
             spantext.setAttribute("style","color:#54FF9F;text-shadow: 1px 1px 10px #39c70d;background-image:url(https://static.cracked.to/images/bg1.gif);");
-            spantext.appendChild(document.createTextNode(" | Stonehub v1"));
+            spantext.appendChild(document.createTextNode(" | " + this.stonehub_version ));
             usersOnlineDiv.appendChild(spantext);
         },  this.socket_latency);
 
