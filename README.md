@@ -14,8 +14,8 @@ The extension intends to add some pretty nice QoL features :
 
 ### + How to install the script
 
-##### Stonehub needs you to install [Tampermonkey](https://www.tampermonkey.net/) at the first place.
-##### You can then go here <=> userscripts and click on the install button !
+Stonehub needs you to install [Tampermonkey](https://www.tampermonkey.net/) at the first place.
+You can then go here <=> userscripts and click on the install button !
 
 ### + Issues
 
