@@ -3,12 +3,13 @@
 **Stonehub** is an extension for the progressive idle game  **[Idlescape.com](https://idlescape.com/game)**.
 Runs through Tampermonkey.
 
-> ### + Features
+### + Features
 
 The extension intends to add some pretty nice QoL features :
-####  - Autorefresh Marketplace
+> ####  - Autorefresh Marketplace
 You'll never need to click the refresh button again ! It's all automated now.
-####  - Resell Auctions
+
+> ####  - Resell Auctions
 Change the price of your auctions and the stack size you want to sell without cancelling your auctions first ! 
 
 ### + How to install the script
