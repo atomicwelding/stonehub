@@ -40,17 +40,11 @@ class Stonehub {
         this.itemID = -1;
         this.inventory_item_id = -1;
 
+        this.latest_watched_itemID = -1;
+
         this.waiting_inventory_update_timeout = 500;
         this.max_waiting_inventory_update_iter = 1000;
 
-        /**
-         * Simple flag system to limit the number of requests used
-         * It may be improved later.
-         */
-        this.flags = {
-            "watchingItem":false,
-            "watchingAuction":false
-        }
     }
 
     message_handler(that, e) {
@@ -108,15 +102,13 @@ Stonehub.prototype.add_order_tab_action = function(that) {
      * to manage the marketplace and not just for the order tab. Please rename the function
      */
 
-    // since you're watching the whole market, deactivate the other flags
-    that.flags.watchingItem = false;
-    that.flags.watchingAuction = false;
-
     // ==== ORDER BUTTON ==== //
     let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
 
-    // remove the runecrafting banner
-    marketplace_buy_info.removeChild(document.getElementsByClassName('runecrafting-info')[0]);
+    // remove the runecrafting banner)
+    let banner = document.getElementsByClassName('runecrafting-info');
+    if(banner.length != 0)
+        marketplace_buy_info.removeChild(banner[0]);
 
     // add 'Orders' button
     let order_button = document.createElement('button');
@@ -132,25 +124,14 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
      * This method add some convenients and small adjustements to an item page.
      * Current features :
      *      Autorefresh
-     *  BUG :
-     *      queueing is not working since the method is called at each request emitted here
-     *      so we're hard spamming request and the timeout doesn't help
      */
 
-    // since you're watching the page, make the flag up and deactivate others
-    that.flags.watchingItem = true;
-    that.flags.watchingAuction = false;
-
-    // ==== AUTOREFRESH ==== //
-    // not very clean
-    let clr = setTimeout(() => {
-        // we use the flags here to limit the number of requests, server load.
-        if(that.flags.watchingItem){
+    // === AUTOREFRESH ==== // 
+    setTimeout(() => {
+        let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
+        if(crafting_table_exists.length != 0)
             that.sockets[0].send('42["get player marketplace items",'+data[0].itemID+']');
-        }
-        else
-            clearTimeout(clr);
-    }, that.auto_refresh_time);
+    },  that.auto_refresh_time);
 }
 
 Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inventory_item_id) {
@@ -270,22 +251,13 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
      *      Button added for further features
      *      Autorefresh when someone bought the item
      */
-    // since you're watching the page, make the flag up and deactivate others
-    that.flags.watchingAuction = true;
-    that.flags.watchingItem = false;
-
-    // console.log(data);
 
     // ==== AUTOREFRESH ==== //
-    let clr = setTimeout(() => {
-        // we use the flags here to limit the number of requests, server load.
-        if(that.flags.watchingAuction){
+    setTimeout(() => {
+        let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
+        if(crafting_table_exists.length != 0)
             that.sockets[0].send('42["get player auctions",[]]');
-        }
-        else
-            clearTimeout(clr);
-    }, that.auto_refresh_time);
-
+    },  that.auto_refresh_time);
 
     // ==== STONE BUTTON ==== //
     let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tr');
