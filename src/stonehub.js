@@ -25,7 +25,7 @@ class Stonehub {
          * You can easily implement new corresponding methods by adding the event as the key, and a reference to the right method.
          */
         this.event_to_action = {
-            "get market manifest":this.add_order_tab_action,
+            "get market manifest":this.convenients_marketplace_action,
             "get player marketplace items":this.convenients_marketplace_items_action,
             "get player auctions":this.convenients_sell_item_action,
 			"update inventory":this.update_inventory_action
@@ -38,14 +38,19 @@ class Stonehub {
         this.auto_refresh_time  = 1000;
 
         this.sockets = [];
-        
+		
+		// Used for canceling order confirmation
         this.itemID = -1;
         this.inventory_item_id = -1;
 
+		// Used for minPrice Storage
+        this.raw_item_id = -1;
+        this.min_price = -1;
+
         this.latest_watched_itemID = -1;
 
-        this.waiting_inventory_update_timeout = 500;
-        this.max_waiting_inventory_update_iter = 1000;
+        this.waiting_timeout = 500;
+        this.max_update_iter = 1000;
 
     }
 
@@ -107,37 +112,49 @@ class Stonehub {
     }
 }
 
-Stonehub.prototype.add_order_tab_action = function(that) {
+/**
+ *  Method to manage the market manifest.
+ */
+Stonehub.prototype.convenients_marketplace_action = function(that) {
+	
     /**
      * The method add an order tab to the main page of the marketplace. But the whole function should be seen as the place
      * to manage the marketplace and not just for the order tab. Please rename the function
+	 * NOT IMPLEMENTED YET
      */
 
     // ==== ORDER BUTTON ==== //
-    let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
+    //let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
 
     // remove the runecrafting banner)
-    let banner = document.getElementsByClassName('runecrafting-info');
-    if(banner.length != 0)
-        marketplace_buy_info.removeChild(banner[0]);
+    //let banner = document.getElementsByClassName('runecrafting-info');
+    //if(banner.length != 0)
+     //   marketplace_buy_info.removeChild(banner[0]);
 
     // add 'Orders' button
-    let order_button = document.createElement('button');
-    order_button.className = 'marketplace-back-button';
-    order_button.innerHTML = 'Orders';
-    order_button.title     = 'Not implemented yet';
-    marketplace_buy_info.insertBefore(order_button, document.getElementById('marketplace-refresh-button'));
+    //let order_button = document.createElement('button');
+    //order_button.className = 'marketplace-back-button';
+    //order_button.innerHTML = 'Orders';
+    //order_button.title     = 'Not implemented yet';
+    //marketplace_buy_info.insertBefore(order_button, document.getElementById('marketplace-refresh-button'));
 
 }
 
 Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
+	
+	/**
+	 * We need to store the items info for other features
+	 */
+	that.min_price = data[0].price;
+	that.raw_item_id = data[0].itemID;
+	
     /**
      * This method add some convenients and small adjustements to an item page.
      * Current features :
      *      Autorefresh
      */
 
-    // === AUTOREFRESH ==== // 
+    // === AUTOREFRESH ==== //
     setTimeout(() => {
         let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
         if(crafting_table_exists.length != 0)
@@ -145,7 +162,22 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
     },  that.auto_refresh_time);
 }
 
-Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inventory_item_id) {
+/**
+ * Retrieving min price before calling popup
+ */
+Stonehub.prototype.prepare_popup_sell_item = function(that, data, id, itemID, inventory_item_id) {
+
+	/**
+	 *  Waiting for actual min price to be retrieved
+	 */
+	that.waiting_min_price(that, itemID)
+		.then((price) => {that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,price)})
+		.catch((e) => {
+		 console.log(e);
+		 that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,-1);});
+}
+
+Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inventory_item_id, min_price) {
 
     /**
      * This method implements a resell feature
@@ -168,8 +200,9 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                                                 </div>
                                             </div>
                                             <div variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-green">Sell Max</div>
-                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: 178 <img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
-                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary"><span id="lowest-price"> This item sells to NPCs for: 100 <img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
+                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + min_price + `
+											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
+                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary"></p>
                                             <input id="price" type="text" value="0">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: 0 <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : 0 <img src="/images/gold_coin.png" alt="" class="icon16"></p>
                                         </div>
@@ -197,6 +230,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                 document.getElementById('modify_auction_popup').outerHTML = '';
             break;
             case document.getElementById('sell_button'):
+
                 // cancel auction
                 that.sockets[0].send('42["cancel my auction",'+id+']');
 
@@ -204,12 +238,15 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                 that.waiting_inventory_update(that, itemID)
                     .then(tosell_id => {
                         // make a new auction with the right id
-                        that.sockets[0].send('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+tosell_id+'}]');
+                        let price =  document.getElementById('price').value;
+                        let amount =  document.getElementById('amount').firstChild.value;
+
+                        that.sockets[0].send('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+tosell_id+'}]');
                     });
-                
+
                 // if we can't find the inventory_item_id
                 that.waiting_inventory_update.catch(e => console.log(e));
-                
+
                 // close popup
                 document.getElementById('modify_auction_popup').outerHTML = '';
             break;
@@ -231,7 +268,7 @@ Stonehub.prototype.update_inventory_action = function(that, data) {
 Stonehub.prototype.waiting_inventory_update = function(that, itemID) {
     /**
      * This method returns a promise when called
-     * It is used in this.show_popup_sell_item() to get 
+     * It is used in this.show_popup_sell_item() to get
      * the corresponding IDs of the item being resold.
      * It waits for the right "update inventory" event, checking
      * if the itemID of an updated item is the same as the one passed as argument
@@ -245,13 +282,41 @@ Stonehub.prototype.waiting_inventory_update = function(that, itemID) {
             if(that.itemID == itemID)
                 resolve(that.inventory_item_id);
             else {
-                if(c >= that.max_waiting_inventory_update_iter)
+                if(c >= that.waiting_timeout)
                     reject(new Error('timeout waiting for msg'));
                 else
-                    setTimeout(check, that.waiting_inventory_update_timeout);
+                    setTimeout(check, that.waiting_timeout);
             }
-            
-        }, that.waiting_inventory_update_timeout);
+
+        }, that.waiting_timeout);
+    });
+}
+
+Stonehub.prototype.waiting_min_price = function(that, raw_item_id) {
+    /**
+     * This method returns a promise when called
+     * It is used in this.show_popup_sell_item() to get
+     * the corresponding min price of the item shown in the popup
+     * It will sends for "get market manifest itemID" and waits for response.
+     */
+	 
+    return new Promise((resolve, reject) => {
+
+		that.sockets[0].send('42["get player marketplace items",' + raw_item_id + ']');
+        
+		let c = 0;
+        setTimeout(function check() {
+            c = ++c;
+            if(that.raw_item_id == raw_item_id)
+                resolve(that.min_price);
+            else {
+                if(c >= that.waiting_timeout)
+                    reject(new Error('timeout waiting for msg'));
+                else
+                    setTimeout(check, that.waiting_timeout);
+            }
+
+        }, that.waiting_timeout);
     });
 }
 
@@ -294,7 +359,7 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
 
             // listener, popup
             modify_auction_button.addEventListener('click', () => {
-                that.show_popup_sell_item(that, data, data[index].id, data[index].itemID, data[index].inventory_item_id);
+                that.prepare_popup_sell_item(that, data, data[index].id, data[index].itemID, data[index].inventory_item_id);
             });
             element.appendChild(modify_auction_button);
         }
