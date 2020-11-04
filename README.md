@@ -3,7 +3,7 @@
 **Stonehub** is an extension for the progressive idle game  **[Idlescape.com](https://idlescape.com/game)**.
 Runs through Tampermonkey.
 
-### + Features
+> ### + Features
 
 The extension intends to add some pretty nice QoL features :
 ####  - Autorefresh Marketplace
