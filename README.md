@@ -4,7 +4,7 @@
 Runs through Tampermonkey.
 
 ### + Features
----
+
 The extension intends to add some pretty nice QoL features :
 ####  - Autorefresh Marketplace
 You'll never need to click the refresh button again ! It's all automated now.
@@ -22,7 +22,7 @@ If you notice any kind of issue with the extension, please report it to **messen
 
 ### + About
 
-Authors : **weld** (messenoire), **Chronos**, **Gamergeo**
+Authors : **weld** (messenoire), **ChrOn0os** (flo), **Gamergeo**
 
 Current version : **1.0.0**
 
