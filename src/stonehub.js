@@ -40,7 +40,8 @@ class Stonehub {
         this.itemID = -1;
         this.inventory_item_id = -1;
 
-        this.waiting_inventory_update_timeout = 10000;
+        this.waiting_inventory_update_timeout = 500;
+        this.max_waiting_inventory_update_iter = 1000;
 
         /**
          * Simple flag system to limit the number of requests used
@@ -81,21 +82,6 @@ class Stonehub {
         // keeping the track of this, since changing the scope of the function modify it.
         var that = this;
 
-        // // ==== STATUS ==== //
-        // let menu_button = document.getElementsByClassName('navbar1')[0].children[0];
-        // menu_button.innerHTML = 'bug'
-        // menu_button.addEventListener('click', () => {
-
-        //     alert('ahi');
-        //     // let navbar = document.getElementsByClassName('nav-drawer-container');
-
-        //     // let stonehub_status = document.createElement('div');
-        //     // stonehub_status.innerHTML = 'Stonehub is online';
-        //     // stonehub_status.className = 'drawer-item noselect';
-        //     // navbar.insertBefore(stonehub_status, navbar.children[2]);
-
-        // });
-
         /* src: https://stackoverflow.com/questions/59915987/get-active-websockets-of-a-website-possible */
         /* Handle the current running socket */
         const nativeWebSocket = window.WebSocket;
@@ -111,7 +97,6 @@ class Stonehub {
              * A listener is created to catch messages emitted by the server through the websocket.
              */
             this.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
-            // waitingUpdate(this.sockets[0]);
         },  this.socket_latency);
 
     }
@@ -170,13 +155,11 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
 
 Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inventory_item_id) {
 
-    // GEO, CEST ICI QUE CA SE PASSE
-
     /**
      * This method implements a resell feature
      * Shows when you click on stone button
      */
-    modify_auction_popup_html = `<div role="presentation" class="MuiDialog-root sell-item-dialog" style="position: fixed; z-index: 1300; right: 0px; bottom: 0px; top: 0px; left: 0px;">
+    let modify_auction_popup_html = `<div role="presentation" class="MuiDialog-root sell-item-dialog" style="position: fixed; z-index: 1300; right: 0px; bottom: 0px; top: 0px; left: 0px;">
                                     <div class="MuiBackdrop-root" aria-hidden="true" style="opacity: 1; transition: opacity 225ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;"></div>
                                     <div tabindex="0" data-test="sentinelStart"></div>
                                     <div class="MuiDialog-container MuiDialog-scrollPaper" role="none presentation" tabindex="-1" style="opacity: 1; transition: opacity 225ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;">
@@ -225,23 +208,16 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                 // cancel auction
                 that.sockets[0].send('42["cancel my auction",'+id+']');
 
-                // 
+                // wait to retrieve the inventory_item_id
                 that.waiting_inventory_update(that, itemID)
                     .then(tosell_id => {
+                        // make a new auction with the right id
                         that.sockets[0].send('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+tosell_id+'}]');
-                    })
-
-                // make a new auction
-                //let amount = document.getElementById('amount').value;
-                //let price  = document.getElementById('price').getAttribute('value');
-
-                //console.log(data);
-                // console.log('42["cancel my auction",'+id+']');
-                // console.log('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+id+'}]');
-
-                //console.log('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+id+'}]');
-                // that.sockets[0].send('42["sell item marketplace",{"amount":'+2+',"price":'+111000+',"dbID":'+id+'}]');
-
+                    });
+                
+                // if we can't find the inventory_item_id
+                that.waiting_inventory_update.catch(e => console.log(e));
+                
                 // close popup
                 document.getElementById('modify_auction_popup').outerHTML = '';
             break;
@@ -255,25 +231,35 @@ Stonehub.prototype.update_inventory_action = function(that, data) {
      */
     // /!\ there are 3 items ID
     // id, inventory_item_id and itemID
-    this.itemID = data.item.itemID;
-	this.inventory_item_id = data.item.inventory_item_id;
+
+    that.itemID = data.item.itemID;
+	that.inventory_item_id = data.item.id;
 }
 
 Stonehub.prototype.waiting_inventory_update = function(that, itemID) {
     /**
-     * Promise waiting for update_inventory
+     * This method returns a promise when called
+     * It is used in this.show_popup_sell_item() to get 
+     * the corresponding IDs of the item being resold.
+     * It waits for the right "update inventory" event, checking
+     * if the itemID of an updated item is the same as the one passed as argument
+     * If so, it resolves by passing inventory_item_id
+     * Repeat until you got it, or reject if the process takes too much iteration
      */
     return new Promise((resolve, reject) => {
-		if (that.itemID == itemID) {
-			resolve(that.inventory_item_id);
-		}
-
-        // set timeout so if a response is not received within a
-        // reasonable amount of time, the promise will reject
-        let timer = setTimeout(() => {
-            reject(new Error("timeout waiting for msg"));
+        let c = 0;
+        setTimeout(function check() {
+            c = ++c;
+            if(that.itemID == itemID)
+                resolve(that.inventory_item_id);
+            else {
+                if(c >= that.max_waiting_inventory_update_iter)
+                    reject(new Error('timeout waiting for msg'));
+                else
+                    setTimeout(check, that.waiting_inventory_update_timeout);
+            }
+            
         }, that.waiting_inventory_update_timeout);
-
     });
 }
 
