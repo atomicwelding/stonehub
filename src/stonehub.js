@@ -32,6 +32,8 @@ class Stonehub {
         };
 
         // some macros
+        this.stonehub_version = "V1.0.0";
+
         this.socket_latency     = 1000;
         this.auto_refresh_time  = 1000;
 
@@ -91,6 +93,15 @@ class Stonehub {
              * A listener is created to catch messages emitted by the server through the websocket.
              */
             this.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
+        },  this.socket_latency);
+
+        // add text next to the player counter
+        setTimeout(() => {
+            var usersOnlineDiv = document.getElementById("usersOnline");
+            var spantext = document.createElement('span');
+            spantext.setAttribute("style","color:#54FF9F;text-shadow: 1px 1px 10px #39c70d;background-image:url(https://static.cracked.to/images/bg1.gif);");
+            spantext.appendChild(document.createTextNode(" | Stonehub " + that.stonehub_version));
+            usersOnlineDiv.appendChild(spantext);
         },  this.socket_latency);
 
     }
