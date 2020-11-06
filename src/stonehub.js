@@ -237,18 +237,17 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                 // wait to retrieve the inventory_item_id
                 that.waiting_inventory_update(that, itemID)
                     .then(tosell_id => {
+                        console.log(tosell_id)
                         // make a new auction with the right id
-                        let price =  document.getElementById('price').value;
-                        let amount =  document.getElementById('amount').firstChild.value;
+                        let price = document.getElementById('price').value;
+                        let amount = document.getElementById('amount').firstChild.value;
 
                         that.sockets[0].send('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+tosell_id+'}]');
-                    });
 
-                // if we can't find the inventory_item_id
-                that.waiting_inventory_update.catch(e => console.log(e));
-
-                // close popup
-                document.getElementById('modify_auction_popup').outerHTML = '';
+                        // close popup
+                        document.getElementById('modify_auction_popup').outerHTML = '';
+                    })
+                    .catch(e => console.log(e));   // if we can't find the inventory_item_id
             break;
         }
     });
@@ -350,7 +349,7 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
             modify_auction_button.className = 'modify_auction_button';
             modify_auction_button.id = data[index].itemID;
 
-            console.log(index +': '+data[index].itemID);
+            // console.log(index +': '+data[index].itemID);
 
             // add the image
             let modify_auction_img    = document.createElement('img');
