@@ -75,6 +75,11 @@ class Stonehub {
         }
     }
 
+    error_handler(that, e) {
+        let alert_msg = "Something goes wrong with Stonehub ! \nError msg: " + e.message + "\nPlease reload the page or contact messenoire";
+        alert(alert_msg);
+    }
+
     start() {
         /**
          * Main part of the extension
@@ -93,12 +98,20 @@ class Stonehub {
         };
 
         // better idea than timeout? "(sockets != null || timeout(100))"
+        
         setTimeout(() => {
             /**
              * A listener is created to catch messages emitted by the server through the websocket.
              */
-            this.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
-        },  this.socket_latency);
+            try{
+                if(that.sockets.length != 0)
+                    that.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
+                else
+                    throw new Error('socket not initialized');
+            } catch(e) {that.error_handler(that, e);}
+
+
+        },  that.socket_latency);
 
         // add text next to the player counter
         setTimeout(() => {
@@ -107,7 +120,7 @@ class Stonehub {
             spantext.setAttribute("style","color:#54FF9F;text-shadow: 1px 1px 10px #39c70d;background-image:url(https://static.cracked.to/images/bg1.gif);");
             spantext.appendChild(document.createTextNode(" | Stonehub " + that.stonehub_version));
             usersOnlineDiv.appendChild(spantext);
-        },  this.socket_latency);
+        },  that.socket_latency);
 
     }
 }
@@ -173,7 +186,7 @@ Stonehub.prototype.prepare_popup_sell_item = function(that, data, id, itemID, in
 	that.waiting_min_price(that, itemID)
 		.then((price) => {that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,price)})
 		.catch((e) => {
-		 console.log(e);
+		 that.error_handler(that, e);
 		 that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,-1);});
 }
 
@@ -247,7 +260,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                         // close popup
                         document.getElementById('modify_auction_popup').outerHTML = '';
                     })
-                    .catch(e => console.log(e));   // if we can't find the inventory_item_id
+                    .catch(e => error_handler(that, e));   // if we can't find the inventory_item_id
             break;
         }
     });
@@ -282,7 +295,7 @@ Stonehub.prototype.waiting_inventory_update = function(that, itemID) {
                 resolve(that.inventory_item_id);
             else {
                 if(c >= that.waiting_timeout)
-                    reject(new Error('timeout waiting for msg'));
+                    reject(new Error('timeout waiting to update inventory'));
                 else
                     setTimeout(check, that.waiting_timeout);
             }
@@ -310,7 +323,7 @@ Stonehub.prototype.waiting_min_price = function(that, raw_item_id) {
                 resolve(that.min_price);
             else {
                 if(c >= that.waiting_timeout)
-                    reject(new Error('timeout waiting for msg'));
+                    reject(new Error('timeout waiting to retrieve min price'));
                 else
                     setTimeout(check, that.waiting_timeout);
             }
@@ -369,6 +382,4 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
 
 try {
     let sh = new Stonehub(); sh.start();
-} catch (e) {
-    console.log(e)
-}
+} catch(e) {that.error_handler(that, e);}
