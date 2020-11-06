@@ -256,19 +256,9 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
     // smoother ui, add commas to numbers
     let ui_changed = false;
     let update_ui = setInterval(() => {
-        let price = ui_changed ? that.commas_to_int(document.getElementById('price').value) : parseInt(document.getElementById('price').value);
-        let fees_percentage = 0.05; 
 
-        let to_bouilli = (price > 0 || typeof price == 'NaN') ? price * fees_percentage : 1;
-        let benefits = (price > 0 || typeof price == 'NaN') ? price - to_bouilli : 0;
-
-        
-
-        document.getElementById('benefits').innerHTML = that.int_to_commas(Math.floor(benefits));
-        document.getElementById('fees').innerHTML = that.int_to_commas(Math.floor(to_bouilli) < 1 ? 1 : Math.floor(to_bouilli));
-        document.getElementById('price').value = that.int_to_commas(price);
-
-        ui_changed = true;
+        that.update_prices_popup(that, ui_changed);
+		ui_changed = true;
     }, that.update_ui_rate);
 
     // let update_price = setInterval(() => {
@@ -308,6 +298,24 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
             break;
         }
     });
+}
+
+/**
+ * Update price and fees in custom sell pop-up
+ */
+Stonehub.prototype.update_prices_popup = function(that, ui_changed) {
+	let popup_still_exists = document.getElementById('modify_auction_popup');
+    if (popup_still_exists != null && popup_still_exists.length != 0) {
+		let price = ui_changed ? that.commas_to_int(document.getElementById('price').value) : parseInt(document.getElementById('price').value);
+		let fees_percentage = 0.05;
+
+		let to_bouilli = (price > 0 || typeof price == 'NaN') ? price * fees_percentage : 1;
+		let benefits = (price > 0 || typeof price == 'NaN') ? price - to_bouilli : 0;
+
+		document.getElementById('benefits').innerHTML = that.int_to_commas(Math.floor(benefits));
+		document.getElementById('fees').innerHTML = that.int_to_commas(Math.floor(to_bouilli) < 1 ? 1 : Math.floor(to_bouilli));
+		document.getElementById('price').value = that.int_to_commas(price);
+	}
 }
 
 Stonehub.prototype.update_inventory_action = function(that, data) {
