@@ -38,7 +38,7 @@ class Stonehub {
         this.auto_refresh_time  = 1000;
 
         this.sockets = [];
-		
+
 		// Used for canceling order confirmation
         this.itemID = -1;
         this.inventory_item_id = -1;
@@ -79,6 +79,7 @@ class Stonehub {
 
     error_handler(that, e) {
         let alert_msg = "Something goes wrong with Stonehub ! \nError msg: " + e.message + "\nPlease reload the page or contact messenoire";
+        console.log(e);
         alert(alert_msg);
     }
 
@@ -100,7 +101,7 @@ class Stonehub {
         };
 
         // better idea than timeout? "(sockets != null || timeout(100))"
-        
+
         setTimeout(() => {
             /**
              * A listener is created to catch messages emitted by the server through the websocket.
@@ -147,7 +148,7 @@ Stonehub.prototype.commas_to_int = function(s) {
  *  Method to manage the market manifest.
  */
 Stonehub.prototype.convenients_marketplace_action = function(that) {
-	
+
     /**
      * The method add an order tab to the main page of the marketplace. But the whole function should be seen as the place
      * to manage the marketplace and not just for the order tab. Please rename the function
@@ -172,13 +173,13 @@ Stonehub.prototype.convenients_marketplace_action = function(that) {
 }
 
 Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
-	
+
 	/**
 	 * We need to store the items info for other features
 	 */
 	that.min_price = data[0].price;
 	that.raw_item_id = data[0].itemID;
-	
+
     /**
      * This method add some convenients and small adjustements to an item page.
      * Current features :
@@ -224,16 +225,10 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                                         </div>
                                         <div class="MuiDialogContent-root">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">How many do you want to sell?</p>
-                                            <div class="MuiGrid-root item-input MuiGrid-container MuiGrid-spacing-xs-2 MuiGrid-align-items-xs-center">
-                                                <div class="MuiGrid-root item-input-slider MuiGrid-item MuiGrid-grid-xs-true"><span class="MuiSlider-root MuiSlider-colorPrimary"><span class="MuiSlider-rail"></span><span class="MuiSlider-track" style="left: 0%; width: 0%;"></span><input type="hidden" value="1"><span class="MuiSlider-thumb MuiSlider-thumbColorPrimary" tabindex="0" role="slider" data-index="0" aria-labelledby="continuous-slider" aria-orientation="horizontal" aria-valuemax="2268" aria-valuemin="1" aria-valuenow="1" style="left: 0%;"></span></span></div>
-                                                <div class="MuiGrid-root MuiGrid-item">
-                                                <div id='amount' class="MuiInputBase-root MuiInput-root MuiInput-underline item-input-text MuiInputBase-marginDense MuiInput-marginDense"><input type="number" step="1" min="1" max="2268" aria-labelledby="input-slider" class="MuiInputBase-input MuiInput-input MuiInputBase-inputMarginDense MuiInput-inputMarginDense" value="1"></div>
-                                                </div>
-                                            </div>
-                                            <div variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-green">Sell Max</div>
+                                            <input id="amount" type="text" value="0">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + min_price + `
 											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
-                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary"></p>
+                                            <p class="MuiTypography-root MuiDialogContentText-root textography-body1 MuiTypography-colorTextSecondary"></p>
                                             <input id="price" type="text" value="0">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: <span id='benefits'>0</span> <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : <span id='fees'>0</span>  <img src="/images/gold_coin.png" alt="" class="icon16"></p>
                                         </div>
@@ -254,11 +249,13 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
     body.appendChild(modify_auction_popup);
 
     // smoother ui, add commas to numbers
-    let ui_changed = false;
+    let price_changed = false;
+    let amount_changed = false;
     let update_ui = setInterval(() => {
 
-        that.update_prices_popup(that, ui_changed);
-		ui_changed = true;
+        that.update_prices_popup(that, price_changed, amount_changed);
+        price_changed = true;
+		amount_changed = true;
     }, that.update_ui_rate);
 
     // let update_price = setInterval(() => {
@@ -272,7 +269,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
         switch(e.target) {
             case document.getElementById('close_button'):
                 // close popup && remove ui updaters
-                clearInterval(update_ui); ui_changed = false;
+                clearInterval(update_ui); price_changed = false; amount_changed = false;
                 document.getElementById('modify_auction_popup').outerHTML = '';
             break;
             case document.getElementById('sell_button'):
@@ -286,12 +283,12 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
 
                         // make a new auction with the right id
                         let price = that.commas_to_int(document.getElementById('price').value);
-                        let amount = document.getElementById('amount').firstChild.value;
+                        let amount = that.commas_to_int(document.getElementById('amount').value);
 
                         that.sockets[0].send('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+tosell_id+'}]');
-                        
+
                         // close popup && remove ui updaters
-                        clearInterval(update_ui); ui_changed = false;
+                        clearInterval(update_ui); price_changed = false; amount_changed = false;
                         document.getElementById('modify_auction_popup').outerHTML = '';
                     })
                     .catch(e => that.error_handler(that, e));   // if we can't find the inventory_item_id
@@ -303,18 +300,20 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
 /**
  * Update price and fees in custom sell pop-up
  */
-Stonehub.prototype.update_prices_popup = function(that, ui_changed) {
+Stonehub.prototype.update_prices_popup = function(that, price_changed, amount_changed) {
 	let popup_still_exists = document.getElementById('modify_auction_popup');
     if (popup_still_exists != null && popup_still_exists.length != 0) {
-		let price = ui_changed ? that.commas_to_int(document.getElementById('price').value) : parseInt(document.getElementById('price').value);
+		let price = price_changed ? that.commas_to_int(document.getElementById('price').value) : parseInt(document.getElementById('price').value);
+		let amount = amount_changed ? that.commas_to_int(document.getElementById('amount').value) : parseInt(document.getElementById('amount').value);
 		let fees_percentage = 0.05;
 
-		let to_bouilli = (price > 0 || typeof price == 'NaN') ? price * fees_percentage : 1;
-		let benefits = (price > 0 || typeof price == 'NaN') ? price - to_bouilli : 0;
+		let to_bouilli = (price > 0 || typeof price == 'NaN') ? amount * price * fees_percentage : 1;
+		let benefits = (price > 0 || typeof price == 'NaN') ? amount * price - to_bouilli : 0;
 
 		document.getElementById('benefits').innerHTML = that.int_to_commas(Math.floor(benefits));
 		document.getElementById('fees').innerHTML = that.int_to_commas(Math.floor(to_bouilli) < 1 ? 1 : Math.floor(to_bouilli));
 		document.getElementById('price').value = that.int_to_commas(price);
+		document.getElementById('amount').value = that.int_to_commas(amount);
 	}
 }
 
@@ -363,11 +362,11 @@ Stonehub.prototype.waiting_min_price = function(that, raw_item_id) {
      * the corresponding min price of the item shown in the popup
      * It will sends for "get market manifest itemID" and waits for response.
      */
-	 
+
     return new Promise((resolve, reject) => {
 
 		that.sockets[0].send('42["get player marketplace items",' + raw_item_id + ']');
-        
+
 		let c = 0;
         setTimeout(function check() {
             c = ++c;
