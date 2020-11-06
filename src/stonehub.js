@@ -43,6 +43,8 @@ class Stonehub {
         this.itemID = -1;
         this.inventory_item_id = -1;
 
+        this.update_ui_rate = 500;
+
 		// Used for minPrice Storage
         this.raw_item_id = -1;
         this.min_price = -1;
@@ -124,6 +126,22 @@ class Stonehub {
 
     }
 }
+
+
+Stonehub.prototype.int_to_commas = function(x) {
+    // src https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+Stonehub.prototype.commas_to_int = function(s) {
+    let result;
+    if(typeof s == 'number')
+  	    result = s
+    else
+   	    result = s.replace(/[^\d\.\-]/g, "");
+    return parseInt(result);
+}
+
 
 /**
  *  Method to manage the market manifest.
@@ -217,7 +235,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
 											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary"></p>
                                             <input id="price" type="text" value="0">
-                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: 0 <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : 0 <img src="/images/gold_coin.png" alt="" class="icon16"></p>
+                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: <span id='benefits'>0</span> <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : <span id='fees'>0</span>  <img src="/images/gold_coin.png" alt="" class="icon16"></p>
                                         </div>
                                         <div class="MuiDialogActions-root MuiDialogActions-spacing">
                                             <div id='close_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Close</div>
@@ -235,11 +253,36 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
     let body = document.getElementsByTagName('body')[0];
     body.appendChild(modify_auction_popup);
 
+    // smoother ui, add commas to numbers
+    let ui_changed = false;
+    let update_ui = setInterval(() => {
+        let price = ui_changed ? that.commas_to_int(document.getElementById('price').value) : parseInt(document.getElementById('price').value);
+        let fees_percentage = 0.05; 
+
+        let to_bouilli = (price > 0 || typeof price == 'NaN') ? price * fees_percentage : 1;
+        let benefits = (price > 0 || typeof price == 'NaN') ? price - to_bouilli : 0;
+
+        
+
+        document.getElementById('benefits').innerHTML = that.int_to_commas(Math.floor(benefits));
+        document.getElementById('fees').innerHTML = that.int_to_commas(Math.floor(to_bouilli) < 1 ? 1 : Math.floor(to_bouilli));
+        document.getElementById('price').value = that.int_to_commas(price);
+
+        ui_changed = true;
+    }, that.update_ui_rate);
+
+    // let update_price = setInterval(() => {
+    //     let price = document.getElementById('price').value;
+    //     document.getElementById('price').value = that.int_to_commas(price);
+    // }, that.update_ui_rate);
+
     // pairing features to buttons
     // i used e.target instead of adding a listener to each buttons to limit code duplication
     document.addEventListener('click', e => {
         switch(e.target) {
             case document.getElementById('close_button'):
+                // close popup && remove ui updaters
+                clearInterval(update_ui); ui_changed = false;
                 document.getElementById('modify_auction_popup').outerHTML = '';
             break;
             case document.getElementById('sell_button'):
@@ -250,14 +293,15 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                 // wait to retrieve the inventory_item_id
                 that.waiting_inventory_update(that, itemID)
                     .then(tosell_id => {
-                        console.log(tosell_id)
+
                         // make a new auction with the right id
-                        let price = document.getElementById('price').value;
+                        let price = that.commas_to_int(document.getElementById('price').value);
                         let amount = document.getElementById('amount').firstChild.value;
 
                         that.sockets[0].send('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+tosell_id+'}]');
-
-                        // close popup
+                        
+                        // close popup && remove ui updaters
+                        clearInterval(update_ui); ui_changed = false;
                         document.getElementById('modify_auction_popup').outerHTML = '';
                     })
                     .catch(e => error_handler(that, e));   // if we can't find the inventory_item_id
