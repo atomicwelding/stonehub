@@ -304,7 +304,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                         clearInterval(update_ui); ui_changed = false;
                         document.getElementById('modify_auction_popup').outerHTML = '';
                     })
-                    .catch(e => error_handler(that, e));   // if we can't find the inventory_item_id
+                    .catch(e => that.error_handler(that, e));   // if we can't find the inventory_item_id
             break;
         }
     });
@@ -410,7 +410,10 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
 
             // add the image
             let modify_auction_img    = document.createElement('img');
-            modify_auction_img.src    = 'https://idlescape.com/images/mining/stone.png';
+            modify_auction_img.src    = 'https://idlescape.com/images/mining/bronze_pickaxe.png';
+            modify_auction_img.addEventListener('mouseenter', e => e.target.src = 'https://idlescape.com/images/mining/rune_pickaxe.png');
+            modify_auction_img.addEventListener('mouseleave', e => e.target.src = 'https://idlescape.com/images/mining/bronze_pickaxe.png');
+
             modify_auction_button.appendChild(modify_auction_img);
 
             // listener, popup
