@@ -4,7 +4,7 @@
 // @version      1.0
 // @description  small improvements for idlescape's marketplace
 // @author       weld, gamergeo, chrOn0os
-// @match        https://idlescape.com/*
+// @match        https://idlescape.com/game*
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
@@ -289,9 +289,6 @@ Stonehub.prototype.update_prices_popup = function(that, price_changed, amount_ch
 
 		let to_bouilli = (price > 0 || typeof price == 'NaN') ? amount * price * fees_percentage : 1;
 		let benefits = (price > 0 || typeof price == 'NaN') ? amount * price - to_bouilli : 0;
-
-
-        console.log('ici' + price);
 
 		document.getElementById('benefits').innerHTML = that.int_to_commas(Math.floor(benefits));
 		document.getElementById('fees').innerHTML = that.int_to_commas(Math.floor(to_bouilli) < 1 ? 1 : Math.floor(to_bouilli));
