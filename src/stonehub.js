@@ -165,19 +165,25 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
 /**
  * Retrieving min price before calling popup
  */
-Stonehub.prototype.prepare_popup_sell_item = function(that, data, id, itemID, inventory_item_id) {
+Stonehub.prototype.prepare_popup_sell_item = function(that, order_data) {
 
 	/**
 	 *  Waiting for actual min price to be retrieved
 	 */
-	that.waiting_min_price(that, itemID)
-		.then((price) => {that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,price)})
+	that.waiting_min_price(that, order_data.itemID)
+        .then((price) => {that.show_popup_sell_item(that, order_data, price)})
 		.catch((e) => {
 		 that.error_handler(that, e);
-		 that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,-1);});
+		 that.show_popup_sell_item(that, order_data,-1);});
 }
 
-Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inventory_item_id, min_price) {
+Stonehub.prototype.show_popup_sell_item = function(that, order_data, min_price) {
+
+    let id = order_data.id;
+    let itemID = order_data.itemID;
+    let inventory_item_id = order_data.inventory_item_id;
+    let initial_price = order_data.price;
+    let initial_amount =  order_data.stackSize;
 
     /**
      * This method implements a resell feature
@@ -193,11 +199,12 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                                         </div>
                                         <div class="MuiDialogContent-root">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">How many do you want to sell?</p>
-                                            <input id="amount" type="text" value="0">
+                                            <input id="amount" type="text" value="`+ initial_amount + `">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + min_price + `
 											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
                                             <p class="MuiTypography-root MuiDialogContentText-root textography-body1 MuiTypography-colorTextSecondary"></p>
-                                            <input id="price" type="text" value="0">
+                                            <input id="price" type="text" value="`+ initial_price + `">
+                                            <div id='min_price_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Adapt price</div>
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: <span id='benefits'>0</span> <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : <span id='fees'>0</span>  <img src="/images/gold_coin.png" alt="" class="icon16"></p>
                                         </div>
                                         <div class="MuiDialogActions-root MuiDialogActions-spacing">
@@ -220,8 +227,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
     let price_changed = false;
     let amount_changed = false;
     let update_ui = setInterval(() => {
-
-    that.update_prices_popup(that, price_changed, amount_changed);
+        that.update_prices_popup(that, price_changed, amount_changed);
         price_changed = true;
 		amount_changed = true;
     }, that.update_ui_rate);
@@ -249,6 +255,10 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
         amount_changed = false;
     });
 
+     document.getElementById('min_price_button').addEventListener('click', () => {
+		document.getElementById('price').value = min_price - 1;
+    });
+
     document.getElementById('close_button').addEventListener('click', () => {
         // close popup && remove ui updaters
         clearInterval(update_ui);
@@ -261,6 +271,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
 Stonehub.prototype.clean_popup = function(that) {
     document.getElementById('sell_button').removeEventListener('click');
     document.getElementById('close_button').removeEventListener('click');
+    document.getElementById('min_price_button').removeEventListener('click');
     document.getElementById('modify_auction_popup').outerHTML = '';
 
     that.sockets[0].send('42["get player auctions"]');
@@ -278,6 +289,9 @@ Stonehub.prototype.update_prices_popup = function(that, price_changed, amount_ch
 
 		let to_bouilli = (price > 0 || typeof price == 'NaN') ? amount * price * fees_percentage : 1;
 		let benefits = (price > 0 || typeof price == 'NaN') ? amount * price - to_bouilli : 0;
+
+
+        console.log('ici' + price);
 
 		document.getElementById('benefits').innerHTML = that.int_to_commas(Math.floor(benefits));
 		document.getElementById('fees').innerHTML = that.int_to_commas(Math.floor(to_bouilli) < 1 ? 1 : Math.floor(to_bouilli));
@@ -392,7 +406,7 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
 
         // listener, popup
         modify_auction_button.addEventListener('click', () => {
-            that.prepare_popup_sell_item(that, data, data[index].id, data[index].itemID, data[index].inventory_item_id);
+            that.prepare_popup_sell_item(that, data[index]);
         });
         element.appendChild(modify_auction_button);
     });
