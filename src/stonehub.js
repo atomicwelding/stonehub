@@ -78,7 +78,7 @@ class Stonehub {
     }
 
     error_handler(that, e) {
-        let alert_msg = "Something goes wrong with Stonehub ! \nError msg: " + e.message + "\nPlease reload the page or contact messenoire";
+        let alert_msg = "Something goes wrong with Stonehub ! \nError msg: " + e.message + "\nPlease reload the page or contact messenoire / Gamergeo";
         console.log(e);
         alert(alert_msg);
     }
