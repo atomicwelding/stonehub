@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  small improvements for idlescape's marketplace
-// @author       weld
+// @author       weld, gamergeo, chrOn0os
 // @match        https://idlescape.com/*
 // @run-at       document-start
 // @grant        none
