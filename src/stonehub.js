@@ -34,7 +34,7 @@ class Stonehub {
         // some macros
         this.stonehub_version = "V1.0.0";
 
-        this.socket_latency     = 1000;
+        this.socket_latency     = 2000;
         this.auto_refresh_time  = 1000;
 
         this.sockets = [];
@@ -253,48 +253,53 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
     let amount_changed = false;
     let update_ui = setInterval(() => {
 
-        that.update_prices_popup(that, price_changed, amount_changed);
+    that.update_prices_popup(that, price_changed, amount_changed);
         price_changed = true;
 		amount_changed = true;
     }, that.update_ui_rate);
 
-    // let update_price = setInterval(() => {
-    //     let price = document.getElementById('price').value;
-    //     document.getElementById('price').value = that.int_to_commas(price);
-    // }, that.update_ui_rate);
+    console.log('Id:' + id + '/' + itemID);
 
-    // pairing features to buttons
-    // i used e.target instead of adding a listener to each buttons to limit code duplication
-    document.addEventListener('click', e => {
-        switch(e.target) {
-            case document.getElementById('close_button'):
-                // close popup && remove ui updaters
-                clearInterval(update_ui); price_changed = false; amount_changed = false;
-                document.getElementById('modify_auction_popup').outerHTML = '';
-            break;
-            case document.getElementById('sell_button'):
+    document.getElementById('sell_button').addEventListener('click', () => {
 
-                // cancel auction
-                that.sockets[0].send('42["cancel my auction",'+id+']');
+        // cancel auction
+        that.sockets[0].send('42["cancel my auction",'+id+']');
 
-                // wait to retrieve the inventory_item_id
-                that.waiting_inventory_update(that, itemID)
-                    .then(tosell_id => {
+        // make a new auction with the right id
+        let price = that.commas_to_int(document.getElementById('price').value);
+        let amount = that.commas_to_int(document.getElementById('amount').value);
 
-                        // make a new auction with the right id
-                        let price = that.commas_to_int(document.getElementById('price').value);
-                        let amount = that.commas_to_int(document.getElementById('amount').value);
+        // wait to retrieve the inventory_item_id
+        that.waiting_inventory_update(that, itemID)
+            .then(tosell_id => {
+            console.log("ici");
 
-                        that.sockets[0].send('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+tosell_id+'}]');
+            that.sockets[0].send('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+tosell_id+'}]');
 
-                        // close popup && remove ui updaters
-                        clearInterval(update_ui); price_changed = false; amount_changed = false;
-                        document.getElementById('modify_auction_popup').outerHTML = '';
-                    })
-                    .catch(e => that.error_handler(that, e));   // if we can't find the inventory_item_id
-            break;
-        }
+        }).catch(e => that.error_handler(that, e)); // if we can't find the inventory_item_id);
+
+        // close popup && remove ui updaters
+        clearInterval(update_ui);
+        that.clean_popup(that);
+        price_changed = false;
+        amount_changed = false;
     });
+
+    document.getElementById('close_button').addEventListener('click', () => {
+        // close popup && remove ui updaters
+        clearInterval(update_ui);
+        that.clean_popup(that);
+        price_changed = false;
+        amount_changed = false;
+    });
+}
+
+Stonehub.prototype.clean_popup = function(that) {
+    document.getElementById('sell_button').removeEventListener('click');
+    document.getElementById('close_button').removeEventListener('click');
+    document.getElementById('modify_auction_popup').outerHTML = '';
+
+    that.sockets[0].send('42["get player auctions"]');
 }
 
 /**
@@ -384,6 +389,9 @@ Stonehub.prototype.waiting_min_price = function(that, raw_item_id) {
 }
 
 Stonehub.prototype.convenients_sell_item_action = function(that, data) {
+
+    that.clean_auctions();
+
     /**
      * This method add some convenients and small adjustements to the sell page.
      * Current features :
@@ -399,36 +407,52 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
     },  that.auto_refresh_time);
 
     // ==== STONE BUTTON ==== //
-    let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tr');
+    let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tbody')[0].getElementsByTagName('tr');
     let auction_table_tbody_ar= Array.prototype.slice.call(auction_table_tbody);
-    auction_table_tbody_ar.shift();
 
     // for each auction in the table
     auction_table_tbody_ar.forEach((element, index) => {
-        // check if button doesn't already exist
-        if(element.getElementsByClassName('modify_auction_button').length == 0) {
 
-            // add button
-            let modify_auction_button = document.createElement('td');
-            modify_auction_button.className = 'modify_auction_button';
-            modify_auction_button.id = data[index].itemID;
+        // add button
+        let modify_auction_button = document.createElement('td');
+        modify_auction_button.className = 'modify_auction_button';
+        modify_auction_button.id = data[index].itemID;
 
-            // console.log(index +': '+data[index].itemID);
+        // console.log(index +': '+data[index].itemID);
 
-            // add the image
-            let modify_auction_img    = document.createElement('img');
-            modify_auction_img.src    = 'https://idlescape.com/images/mining/bronze_pickaxe.png';
-            modify_auction_img.addEventListener('mouseenter', e => e.target.src = 'https://idlescape.com/images/mining/rune_pickaxe.png');
-            modify_auction_img.addEventListener('mouseleave', e => e.target.src = 'https://idlescape.com/images/mining/bronze_pickaxe.png');
+        // add the image
+        let modify_auction_img    = document.createElement('img');
+        modify_auction_img.src    = 'https://idlescape.com/images/mining/bronze_pickaxe.png';
+        modify_auction_img.addEventListener('mouseenter', e => e.target.src = 'https://idlescape.com/images/mining/rune_pickaxe.png');
+        modify_auction_img.addEventListener('mouseleave', e => e.target.src = 'https://idlescape.com/images/mining/bronze_pickaxe.png');
 
-            modify_auction_button.appendChild(modify_auction_img);
+        modify_auction_button.appendChild(modify_auction_img);
 
-            // listener, popup
-            modify_auction_button.addEventListener('click', () => {
-                that.prepare_popup_sell_item(that, data, data[index].id, data[index].itemID, data[index].inventory_item_id);
-            });
-            element.appendChild(modify_auction_button);
-        }
+        // listener, popup
+        modify_auction_button.addEventListener('click', () => {
+            that.prepare_popup_sell_item(that, data, data[index].id, data[index].itemID, data[index].inventory_item_id);
+        });
+        element.appendChild(modify_auction_button);
+    });
+}
+
+/**
+ * Delete all preexisting modifying buttons?
+ * Mandatory for update
+ */
+Stonehub.prototype.clean_auctions = function() {
+
+    let auction_buttons = document.getElementsByClassName('modify_auction_button');
+    let auction_id = [];
+
+    for (let i = 0; i < auction_buttons.length; i++) {
+        auction_id[i] = auction_buttons[i].id;
+    };
+
+    // WARNING : It's mandatory to act in 2 times for this
+    auction_id.forEach((element, index) => {
+        document.getElementById(auction_id[index]).remove();
+
     });
 }
 
