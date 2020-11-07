@@ -9,8 +9,6 @@
 // @grant        none
 // ==/UserScript==
 
-// todo : mieux gérer les flags, bug queue, ajouter gestion d'erreur
-
 class Stonehub {
 
     /**
@@ -25,7 +23,6 @@ class Stonehub {
          * You can easily implement new corresponding methods by adding the event as the key, and a reference to the right method.
          */
         this.event_to_action = {
-            "get market manifest":this.convenients_marketplace_action,
             "get player marketplace items":this.convenients_marketplace_items_action,
             "get player auctions":this.convenients_sell_item_action,
 			"update inventory":this.update_inventory_action
@@ -143,35 +140,6 @@ Stonehub.prototype.commas_to_int = function(s) {
     return parseInt(result);
 }
 
-
-/**
- *  Method to manage the market manifest.
- */
-Stonehub.prototype.convenients_marketplace_action = function(that) {
-
-    /**
-     * The method add an order tab to the main page of the marketplace. But the whole function should be seen as the place
-     * to manage the marketplace and not just for the order tab. Please rename the function
-	 * NOT IMPLEMENTED YET
-     */
-
-    // ==== ORDER BUTTON ==== //
-    //let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
-
-    // remove the runecrafting banner)
-    //let banner = document.getElementsByClassName('runecrafting-info');
-    //if(banner.length != 0)
-     //   marketplace_buy_info.removeChild(banner[0]);
-
-    // add 'Orders' button
-    //let order_button = document.createElement('button');
-    //order_button.className = 'marketplace-back-button';
-    //order_button.innerHTML = 'Orders';
-    //order_button.title     = 'Not implemented yet';
-    //marketplace_buy_info.insertBefore(order_button, document.getElementById('marketplace-refresh-button'));
-
-}
-
 Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
 
 	/**
@@ -258,8 +226,6 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
 		amount_changed = true;
     }, that.update_ui_rate);
 
-    console.log('Id:' + id + '/' + itemID);
-
     document.getElementById('sell_button').addEventListener('click', () => {
 
         // cancel auction
@@ -272,8 +238,6 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
         // wait to retrieve the inventory_item_id
         that.waiting_inventory_update(that, itemID)
             .then(tosell_id => {
-            console.log("ici");
-
             that.sockets[0].send('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+tosell_id+'}]');
 
         }).catch(e => that.error_handler(that, e)); // if we can't find the inventory_item_id);
@@ -417,8 +381,6 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
         let modify_auction_button = document.createElement('td');
         modify_auction_button.className = 'modify_auction_button';
         modify_auction_button.id = data[index].itemID;
-
-        // console.log(index +': '+data[index].itemID);
 
         // add the image
         let modify_auction_img    = document.createElement('img');
