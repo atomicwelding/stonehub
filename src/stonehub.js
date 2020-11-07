@@ -3,45 +3,57 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  small improvements for idlescape's marketplace
-// @author       weld
+// @author       weld, gamergeo, chrOn0os
 // @match        https://idlescape.com/*
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
 
+// todo : mieux gérer les flags, bug queue, ajouter gestion d'erreur
+
 class Stonehub {
-    
+
     /**
      * Stonehub is a tampermonkey extension ; its purpose is to add some QoL on the marketplace.
      * This works by hooking the current running socket and make simple call to the server.
      */
 
     constructor() {
-        
+
         /**
          * This dictionnary embed all the pair event-methods.
-         * You can easily implement new corresponding methods by adding the event as the key, and a reference the right method. 
+         * You can easily implement new corresponding methods by adding the event as the key, and a reference to the right method.
          */
         this.event_to_action = {
-            "get market manifest":this.add_order_tab_action,
-            "get player marketplace items":this.convenients_marketplace_items_action
+            "get market manifest":this.convenients_marketplace_action,
+            "get player marketplace items":this.convenients_marketplace_items_action,
+            "get player auctions":this.convenients_sell_item_action,
+			"update inventory":this.update_inventory_action
         };
 
         // some macros
-        this.socket_latency     = 1000;
+        this.stonehub_version = "V1.0.0";
+
+        this.socket_latency     = 2000;
         this.auto_refresh_time  = 1000;
-        
+
         this.sockets = [];
 
-        this.stonehub_version = "V1.0.0"
+		// Used for canceling order confirmation
+        this.itemID = -1;
+        this.inventory_item_id = -1;
 
-        /**
-         * Simple flag system to limit the number of requests used
-         * It may be improved later.
-         */
-        this.flags = {
-            "watchingItem":false
-        }
+        this.update_ui_rate = 500;
+
+		// Used for minPrice Storage
+        this.raw_item_id = -1;
+        this.min_price = -1;
+
+        this.latest_watched_itemID = -1;
+
+        this.waiting_timeout = 500;
+        this.max_update_iter = 1000;
+
     }
 
     message_handler(that, e) {
@@ -50,7 +62,7 @@ class Stonehub {
          * When a new websocket message is emitted from the server
          * the extension hooks it and call the desired methods.
          * Check out this.event_to_action.
-         * 
+         *
          * All the methods are called with a reference to this/that and the datas the game threw.
          * Please keep at least a reference to that when creating a new method.
          */
@@ -65,6 +77,12 @@ class Stonehub {
         }
     }
 
+    error_handler(that, e) {
+        let alert_msg = "Something goes wrong with Stonehub ! \nError msg: " + e.message + "\nPlease reload the page or contact messenoire / Gamergeo";
+        console.log(e);
+        alert(alert_msg);
+    }
+
     start() {
         /**
          * Main part of the extension
@@ -72,83 +90,374 @@ class Stonehub {
 
         // keeping the track of this, since changing the scope of the function modify it.
         var that = this;
-        
+
         /* src: https://stackoverflow.com/questions/59915987/get-active-websockets-of-a-website-possible */
         /* Handle the current running socket */
         const nativeWebSocket = window.WebSocket;
         window.WebSocket = function(...args){
-            console.log('ahi');
             const socket = new nativeWebSocket(...args);
             that.sockets.push(socket);
             return socket;
         };
 
         // better idea than timeout? "(sockets != null || timeout(100))"
+
         setTimeout(() => {
             /**
              * A listener is created to catch messages emitted by the server through the websocket.
              */
-            this.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
-        },  this.socket_latency);
+            try{
+                if(that.sockets.length != 0)
+                    that.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
+                else
+                    throw new Error('socket not initialized');
+            } catch(e) {that.error_handler(that, e);}
+
+
+        },  that.socket_latency);
 
         // add text next to the player counter
         setTimeout(() => {
             var usersOnlineDiv = document.getElementById("usersOnline");
             var spantext = document.createElement('span');
             spantext.setAttribute("style","color:#54FF9F;text-shadow: 1px 1px 10px #39c70d;background-image:url(https://static.cracked.to/images/bg1.gif);");
-            spantext.appendChild(document.createTextNode(" | " + this.stonehub_version ));
+            spantext.appendChild(document.createTextNode(" | Stonehub " + that.stonehub_version));
             usersOnlineDiv.appendChild(spantext);
-        },  this.socket_latency);
+        },  that.socket_latency);
 
-    } 
+    }
 }
 
-Stonehub.prototype.add_order_tab_action = function(that) {
+
+Stonehub.prototype.int_to_commas = function(x) {
+    // src https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+Stonehub.prototype.commas_to_int = function(s) {
+    let result;
+    if(typeof s == 'number')
+  	    result = s
+    else
+   	    result = s.replace(/[^\d\.\-]/g, "");
+    return parseInt(result);
+}
+
+
+/**
+ *  Method to manage the market manifest.
+ */
+Stonehub.prototype.convenients_marketplace_action = function(that) {
+
     /**
      * The method add an order tab to the main page of the marketplace. But the whole function should be seen as the place
      * to manage the marketplace and not just for the order tab. Please rename the function
+	 * NOT IMPLEMENTED YET
      */
-    
-    // since you're watching the whole market, deactivate the watchingItem flag
-    that.flags.watchingItem = false;
-    
-    let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
-    
-    // remove the runecrafting banner
-    marketplace_buy_info.removeChild(document.getElementsByClassName('runecrafting-info')[0]);
+
+    // ==== ORDER BUTTON ==== //
+    //let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
+
+    // remove the runecrafting banner)
+    //let banner = document.getElementsByClassName('runecrafting-info');
+    //if(banner.length != 0)
+     //   marketplace_buy_info.removeChild(banner[0]);
 
     // add 'Orders' button
-    let order_button = document.createElement('button');
-    order_button.className = 'marketplace-back-button';
-    order_button.innerHTML = 'Orders';
-    order_button.title     = 'Not implemented yet';
-    marketplace_buy_info.insertBefore(order_button, document.getElementById('marketplace-refresh-button'));
+    //let order_button = document.createElement('button');
+    //order_button.className = 'marketplace-back-button';
+    //order_button.innerHTML = 'Orders';
+    //order_button.title     = 'Not implemented yet';
+    //marketplace_buy_info.insertBefore(order_button, document.getElementById('marketplace-refresh-button'));
 
 }
 
 Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
+
+	/**
+	 * We need to store the items info for other features
+	 */
+	that.min_price = data[0].price;
+	that.raw_item_id = data[0].itemID;
+
     /**
      * This method add some convenients and small adjustements to an item page.
-     * Current features : 
+     * Current features :
      *      Autorefresh
      */
 
-    // since you're watching the page, make the flag up
-    that.flags.watchingItem = true;
-    
-    // not very clean but the feature intended here is autorefresh
-    let clr = setTimeout(() => {
-        // we use the flags here to limit the number of requests, server load.
-        if(that.flags.watchingItem)
+    // === AUTOREFRESH ==== //
+    setTimeout(() => {
+        let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
+        if(crafting_table_exists.length != 0)
             that.sockets[0].send('42["get player marketplace items",'+data[0].itemID+']');
-        else
-            clearTimeout(clr);           
-    }, this.auto_refresh_time)
+    },  that.auto_refresh_time);
 }
 
+/**
+ * Retrieving min price before calling popup
+ */
+Stonehub.prototype.prepare_popup_sell_item = function(that, data, id, itemID, inventory_item_id) {
+
+	/**
+	 *  Waiting for actual min price to be retrieved
+	 */
+	that.waiting_min_price(that, itemID)
+		.then((price) => {that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,price)})
+		.catch((e) => {
+		 that.error_handler(that, e);
+		 that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,-1);});
+}
+
+Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inventory_item_id, min_price) {
+
+    /**
+     * This method implements a resell feature
+     * Shows when you click on stone button
+     */
+    let modify_auction_popup_html = `<div role="presentation" class="MuiDialog-root sell-item-dialog" style="position: fixed; z-index: 1300; right: 0px; bottom: 0px; top: 0px; left: 0px;">
+                                    <div class="MuiBackdrop-root" aria-hidden="true" style="opacity: 1; transition: opacity 225ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;"></div>
+                                    <div tabindex="0" data-test="sentinelStart"></div>
+                                    <div class="MuiDialog-container MuiDialog-scrollPaper" role="none presentation" tabindex="-1" style="opacity: 1; transition: opacity 225ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;">
+                                    <div class="MuiPaper-root MuiDialog-paper MuiDialog-paperScrollPaper MuiDialog-paperWidthSm MuiPaper-elevation24 MuiPaper-rounded" role="dialog">
+                                        <div class="MuiDialogTitle-root">
+                                            <h5 class="MuiTypography-root MuiTypography-h6">Modify Auction</h5>
+                                        </div>
+                                        <div class="MuiDialogContent-root">
+                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">How many do you want to sell?</p>
+                                            <input id="amount" type="text" value="0">
+                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + min_price + `
+											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
+                                            <p class="MuiTypography-root MuiDialogContentText-root textography-body1 MuiTypography-colorTextSecondary"></p>
+                                            <input id="price" type="text" value="0">
+                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: <span id='benefits'>0</span> <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : <span id='fees'>0</span>  <img src="/images/gold_coin.png" alt="" class="icon16"></p>
+                                        </div>
+                                        <div class="MuiDialogActions-root MuiDialogActions-spacing">
+                                            <div id='close_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Close</div>
+                                            <div id='sell_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-green">Sell</div>
+                                        </div>
+                                    </div>
+                                    </div>
+                                    <div tabindex="0" data-test="sentinelEnd"></div>
+                                </div>` ;
+
+    let modify_auction_popup = document.createElement('div');
+    modify_auction_popup.id  = 'modify_auction_popup';
+    modify_auction_popup.innerHTML = modify_auction_popup_html;
+
+    let body = document.getElementsByTagName('body')[0];
+    body.appendChild(modify_auction_popup);
+
+    // smoother ui, add commas to numbers
+    let price_changed = false;
+    let amount_changed = false;
+    let update_ui = setInterval(() => {
+
+    that.update_prices_popup(that, price_changed, amount_changed);
+        price_changed = true;
+		amount_changed = true;
+    }, that.update_ui_rate);
+
+    console.log('Id:' + id + '/' + itemID);
+
+    document.getElementById('sell_button').addEventListener('click', () => {
+
+        // cancel auction
+        that.sockets[0].send('42["cancel my auction",'+id+']');
+
+        // make a new auction with the right id
+        let price = that.commas_to_int(document.getElementById('price').value);
+        let amount = that.commas_to_int(document.getElementById('amount').value);
+
+        // wait to retrieve the inventory_item_id
+        that.waiting_inventory_update(that, itemID)
+            .then(tosell_id => {
+            console.log("ici");
+
+            that.sockets[0].send('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+tosell_id+'}]');
+
+        }).catch(e => that.error_handler(that, e)); // if we can't find the inventory_item_id);
+
+        // close popup && remove ui updaters
+        clearInterval(update_ui);
+        that.clean_popup(that);
+        price_changed = false;
+        amount_changed = false;
+    });
+
+    document.getElementById('close_button').addEventListener('click', () => {
+        // close popup && remove ui updaters
+        clearInterval(update_ui);
+        that.clean_popup(that);
+        price_changed = false;
+        amount_changed = false;
+    });
+}
+
+Stonehub.prototype.clean_popup = function(that) {
+    document.getElementById('sell_button').removeEventListener('click');
+    document.getElementById('close_button').removeEventListener('click');
+    document.getElementById('modify_auction_popup').outerHTML = '';
+
+    that.sockets[0].send('42["get player auctions"]');
+}
+
+/**
+ * Update price and fees in custom sell pop-up
+ */
+Stonehub.prototype.update_prices_popup = function(that, price_changed, amount_changed) {
+	let popup_still_exists = document.getElementById('modify_auction_popup');
+    if (popup_still_exists != null && popup_still_exists.length != 0) {
+		let price = price_changed ? that.commas_to_int(document.getElementById('price').value) : parseInt(document.getElementById('price').value);
+		let amount = amount_changed ? that.commas_to_int(document.getElementById('amount').value) : parseInt(document.getElementById('amount').value);
+		let fees_percentage = 0.05;
+
+		let to_bouilli = (price > 0 || typeof price == 'NaN') ? amount * price * fees_percentage : 1;
+		let benefits = (price > 0 || typeof price == 'NaN') ? amount * price - to_bouilli : 0;
+
+		document.getElementById('benefits').innerHTML = that.int_to_commas(Math.floor(benefits));
+		document.getElementById('fees').innerHTML = that.int_to_commas(Math.floor(to_bouilli) < 1 ? 1 : Math.floor(to_bouilli));
+		document.getElementById('price').value = that.int_to_commas(price);
+		document.getElementById('amount').value = that.int_to_commas(amount);
+	}
+}
+
+Stonehub.prototype.update_inventory_action = function(that, data) {
+    /**
+     * Update 2 memvars, see waiting_inventory_update for use
+     */
+    // /!\ there are 3 items ID
+    // id, inventory_item_id and itemID
+
+    that.itemID = data.item.itemID;
+	that.inventory_item_id = data.item.id;
+}
+
+Stonehub.prototype.waiting_inventory_update = function(that, itemID) {
+    /**
+     * This method returns a promise when called
+     * It is used in this.show_popup_sell_item() to get
+     * the corresponding IDs of the item being resold.
+     * It waits for the right "update inventory" event, checking
+     * if the itemID of an updated item is the same as the one passed as argument
+     * If so, it resolves by passing inventory_item_id
+     * Repeat until you got it, or reject if the process takes too much iteration
+     */
+    return new Promise((resolve, reject) => {
+        let c = 0;
+        setTimeout(function check() {
+            c = ++c;
+            if(that.itemID == itemID)
+                resolve(that.inventory_item_id);
+            else {
+                if(c >= that.waiting_timeout)
+                    reject(new Error('timeout waiting to update inventory'));
+                else
+                    setTimeout(check, that.waiting_timeout);
+            }
+
+        }, that.waiting_timeout);
+    });
+}
+
+Stonehub.prototype.waiting_min_price = function(that, raw_item_id) {
+    /**
+     * This method returns a promise when called
+     * It is used in this.show_popup_sell_item() to get
+     * the corresponding min price of the item shown in the popup
+     * It will sends for "get market manifest itemID" and waits for response.
+     */
+
+    return new Promise((resolve, reject) => {
+
+		that.sockets[0].send('42["get player marketplace items",' + raw_item_id + ']');
+
+		let c = 0;
+        setTimeout(function check() {
+            c = ++c;
+            if(that.raw_item_id == raw_item_id)
+                resolve(that.min_price);
+            else {
+                if(c >= that.waiting_timeout)
+                    reject(new Error('timeout waiting to retrieve min price'));
+                else
+                    setTimeout(check, that.waiting_timeout);
+            }
+
+        }, that.waiting_timeout);
+    });
+}
+
+Stonehub.prototype.convenients_sell_item_action = function(that, data) {
+
+    that.clean_auctions();
+
+    /**
+     * This method add some convenients and small adjustements to the sell page.
+     * Current features :
+     *      Button added for further features
+     *      Autorefresh when someone bought the item
+     */
+
+    // ==== AUTOREFRESH ==== //
+    setTimeout(() => {
+        let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
+        if(crafting_table_exists.length != 0)
+            that.sockets[0].send('42["get player auctions",[]]');
+    },  that.auto_refresh_time);
+
+    // ==== STONE BUTTON ==== //
+    let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    let auction_table_tbody_ar= Array.prototype.slice.call(auction_table_tbody);
+
+    // for each auction in the table
+    auction_table_tbody_ar.forEach((element, index) => {
+
+        // add button
+        let modify_auction_button = document.createElement('td');
+        modify_auction_button.className = 'modify_auction_button';
+        modify_auction_button.id = data[index].itemID;
+
+        // console.log(index +': '+data[index].itemID);
+
+        // add the image
+        let modify_auction_img    = document.createElement('img');
+        modify_auction_img.src    = 'https://idlescape.com/images/mining/bronze_pickaxe.png';
+        modify_auction_img.addEventListener('mouseenter', e => e.target.src = 'https://idlescape.com/images/mining/rune_pickaxe.png');
+        modify_auction_img.addEventListener('mouseleave', e => e.target.src = 'https://idlescape.com/images/mining/bronze_pickaxe.png');
+
+        modify_auction_button.appendChild(modify_auction_img);
+
+        // listener, popup
+        modify_auction_button.addEventListener('click', () => {
+            that.prepare_popup_sell_item(that, data, data[index].id, data[index].itemID, data[index].inventory_item_id);
+        });
+        element.appendChild(modify_auction_button);
+    });
+}
+
+/**
+ * Delete all preexisting modifying buttons?
+ * Mandatory for update
+ */
+Stonehub.prototype.clean_auctions = function() {
+
+    let auction_buttons = document.getElementsByClassName('modify_auction_button');
+    let auction_id = [];
+
+    for (let i = 0; i < auction_buttons.length; i++) {
+        auction_id[i] = auction_buttons[i].id;
+    };
+
+    // WARNING : It's mandatory to act in 2 times for this
+    auction_id.forEach((element, index) => {
+        document.getElementById(auction_id[index]).remove();
+
+    });
+}
 
 // ==== MAIN ==== //
-let sh = new Stonehub(); sh.start();
 
-
-
+try {
+    let sh = new Stonehub(); sh.start();
+} catch(e) {that.error_handler(that, e);}
