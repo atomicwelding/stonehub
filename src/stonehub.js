@@ -190,7 +190,8 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
 											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
                                             <p class="MuiTypography-root MuiDialogContentText-root textography-body1 MuiTypography-colorTextSecondary"></p>
                                             <input id="price" type="text" value="`+ initial_price + `">
-                                            <div id='min_price_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Adapt price</div>
+                                            <div id='min_price_button_nok' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Adapt price</div>
+                                            <div id='min_price_button_ok' style="display:none" variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Adapt price</div>
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: <span id='benefits'>0</span> <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : <span id='fees'>0</span>  <img src="/images/gold_coin.png" alt="" class="icon16"></p>
                                         </div>
                                         <div class="MuiDialogActions-root MuiDialogActions-spacing">
@@ -209,16 +210,21 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
     let body = document.getElementsByTagName('body')[0];
     body.appendChild(modify_auction_popup);
 
+    let min_price = -1;
+
     /**
      * Retrieving the min price and setting correct fields
      */
 	that.waiting_min_price(that, order_data.itemID)
         .then((min_price) => {
-        console.log(itemID);
             if (document.getElementById('min_price' + itemID) != null) {
-                console.log("Ici");
-                document.getElementById('min_price' + itemID).innerHTML = that.int_to_commas(min_price);
-                document.getElementById('min_price_button').addEventListener('click', () => {document.getElementById('price').value = min_price - 1;});
+                document.getElementById('min_price' + itemID).innerHTML = that.int_to_commas(min_price)
+
+                document.getElementById('min_price_button_nok').style.display = 'none';
+                document.getElementById('min_price_button_ok').style.display = null;
+
+                // Adding Adapt price function
+                document.getElementById('min_price_button_ok').addEventListener('click', () => {document.getElementById('price').value = min_price - 1;});
             }
         }).catch((e) => {});
 
@@ -254,6 +260,9 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
         amount_changed = false;
     });
 
+    // Waiting for boohi.... (NOK waiting message
+    document.getElementById('min_price_button_nok').addEventListener('click', () => {alert("Waiting for Boohi...");});
+
     document.getElementById('close_button').addEventListener('click', () => {
         // close popup && remove ui updaters
         clearInterval(update_ui);
@@ -266,7 +275,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
 Stonehub.prototype.clean_popup = function(that) {
     document.getElementById('sell_button').removeEventListener('click');
     document.getElementById('close_button').removeEventListener('click');
-    document.getElementById('min_price_button').removeEventListener('click');
+    document.getElementById('min_price_button_ok').removeEventListener('click');
     document.getElementById('modify_auction_popup').outerHTML = '';
 
     that.sockets[0].send('42["get player auctions"]');
