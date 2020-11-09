@@ -199,13 +199,8 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data, min_price) 
                                         </div>
                                         <div class="MuiDialogContent-root">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">How many do you want to sell?</p>
-<<<<<<< HEAD
-                                            <input id="amount" type="text" value="0">
+                                            <input id="amount" type="text" value="0"> `+initial_amount+`
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + that.int_to_commas(min_price) + `
-=======
-                                            <input id="amount" type="text" value="`+ initial_amount + `">
-                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + min_price + `
->>>>>>> 6511baf5bbc7d4fa30c2dac16a41d3d975fdd6ab
 											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
                                             <p class="MuiTypography-root MuiDialogContentText-root textography-body1 MuiTypography-colorTextSecondary"></p>
                                             <input id="price" type="text" value="`+ initial_price + `">
