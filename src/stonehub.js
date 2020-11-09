@@ -1,15 +1,13 @@
 // ==UserScript==
-// @name         Stonehub
+// @name         Stonehub-dev
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  small improvements for idlescape's marketplace
 // @author       weld, gamergeo, chrOn0os
-// @match        https://idlescape.com/*
+// @match        https://idlescape.com/game*
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
-
-// todo : mieux gérer les flags, bug queue, ajouter gestion d'erreur
 
 class Stonehub {
 
@@ -25,7 +23,6 @@ class Stonehub {
          * You can easily implement new corresponding methods by adding the event as the key, and a reference to the right method.
          */
         this.event_to_action = {
-            "get market manifest":this.convenients_marketplace_action,
             "get player marketplace items":this.convenients_marketplace_items_action,
             "get player auctions":this.convenients_sell_item_action,
 			"update inventory":this.update_inventory_action
@@ -143,35 +140,6 @@ Stonehub.prototype.commas_to_int = function(s) {
     return parseInt(result);
 }
 
-
-/**
- *  Method to manage the market manifest.
- */
-Stonehub.prototype.convenients_marketplace_action = function(that) {
-
-    /**
-     * The method add an order tab to the main page of the marketplace. But the whole function should be seen as the place
-     * to manage the marketplace and not just for the order tab. Please rename the function
-	 * NOT IMPLEMENTED YET
-     */
-
-    // ==== ORDER BUTTON ==== //
-    //let marketplace_buy_info = document.getElementsByClassName('marketplace-buy-info')[0];
-
-    // remove the runecrafting banner)
-    //let banner = document.getElementsByClassName('runecrafting-info');
-    //if(banner.length != 0)
-     //   marketplace_buy_info.removeChild(banner[0]);
-
-    // add 'Orders' button
-    //let order_button = document.createElement('button');
-    //order_button.className = 'marketplace-back-button';
-    //order_button.innerHTML = 'Orders';
-    //order_button.title     = 'Not implemented yet';
-    //marketplace_buy_info.insertBefore(order_button, document.getElementById('marketplace-refresh-button'));
-
-}
-
 Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
 
 	/**
@@ -197,19 +165,25 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
 /**
  * Retrieving min price before calling popup
  */
-Stonehub.prototype.prepare_popup_sell_item = function(that, data, id, itemID, inventory_item_id) {
+Stonehub.prototype.prepare_popup_sell_item = function(that, order_data) {
 
 	/**
 	 *  Waiting for actual min price to be retrieved
 	 */
-	that.waiting_min_price(that, itemID)
-		.then((price) => {that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,price)})
+	that.waiting_min_price(that, order_data.itemID)
+        .then((price) => {that.show_popup_sell_item(that, order_data, price)})
 		.catch((e) => {
 		 that.error_handler(that, e);
-		 that.show_popup_sell_item(that, data, id, itemID, inventory_item_id,-1);});
+		 that.show_popup_sell_item(that, order_data,-1);});
 }
 
-Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inventory_item_id, min_price) {
+Stonehub.prototype.show_popup_sell_item = function(that, order_data, min_price) {
+
+    let id = order_data.id;
+    let itemID = order_data.itemID;
+    let inventory_item_id = order_data.inventory_item_id;
+    let initial_price = order_data.price;
+    let initial_amount =  order_data.stackSize;
 
     /**
      * This method implements a resell feature
@@ -225,11 +199,17 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                                         </div>
                                         <div class="MuiDialogContent-root">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">How many do you want to sell?</p>
+<<<<<<< HEAD
                                             <input id="amount" type="text" value="0">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + that.int_to_commas(min_price) + `
+=======
+                                            <input id="amount" type="text" value="`+ initial_amount + `">
+                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + min_price + `
+>>>>>>> 6511baf5bbc7d4fa30c2dac16a41d3d975fdd6ab
 											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
                                             <p class="MuiTypography-root MuiDialogContentText-root textography-body1 MuiTypography-colorTextSecondary"></p>
-                                            <input id="price" type="text" value="0">
+                                            <input id="price" type="text" value="`+ initial_price + `">
+                                            <div id='min_price_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Adapt price</div>
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: <span id='benefits'>0</span> <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : <span id='fees'>0</span>  <img src="/images/gold_coin.png" alt="" class="icon16"></p>
                                         </div>
                                         <div class="MuiDialogActions-root MuiDialogActions-spacing">
@@ -257,8 +237,6 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
 		amount_changed = true;
     }, that.update_ui_rate);
 
-    console.log('Id:' + id + '/' + itemID);
-
     document.getElementById('sell_button').addEventListener('click', () => {
 
         // cancel auction
@@ -271,8 +249,6 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
         // wait to retrieve the inventory_item_id
         that.waiting_inventory_update(that, itemID)
             .then(tosell_id => {
-            console.log("ici");
-
             that.sockets[0].send('42["sell item marketplace",{"amount":'+amount+',"price":'+price+',"dbID":'+tosell_id+'}]');
 
         }).catch(e => that.error_handler(that, e)); // if we can't find the inventory_item_id);
@@ -282,6 +258,10 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
         that.clean_popup(that);
         price_changed = false;
         amount_changed = false;
+    });
+
+     document.getElementById('min_price_button').addEventListener('click', () => {
+		document.getElementById('price').value = min_price - 1;
     });
 
     document.getElementById('close_button').addEventListener('click', () => {
@@ -296,6 +276,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
 Stonehub.prototype.clean_popup = function(that) {
     document.getElementById('sell_button').removeEventListener('click');
     document.getElementById('close_button').removeEventListener('click');
+    document.getElementById('min_price_button').removeEventListener('click');
     document.getElementById('modify_auction_popup').outerHTML = '';
 
     that.sockets[0].send('42["get player auctions"]');
@@ -417,8 +398,6 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
         modify_auction_button.className = 'modify_auction_button';
         modify_auction_button.id = data[index].itemID;
 
-        // console.log(index +': '+data[index].itemID);
-
         // add the image
         let modify_auction_img    = document.createElement('img');
         modify_auction_img.src    = 'https://idlescape.com/images/mining/bronze_pickaxe.png';
@@ -429,7 +408,7 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
 
         // listener, popup
         modify_auction_button.addEventListener('click', () => {
-            that.prepare_popup_sell_item(that, data, data[index].id, data[index].itemID, data[index].inventory_item_id);
+            that.prepare_popup_sell_item(that, data[index]);
         });
         element.appendChild(modify_auction_button);
     });
