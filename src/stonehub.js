@@ -226,7 +226,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
                                         <div class="MuiDialogContent-root">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">How many do you want to sell?</p>
                                             <input id="amount" type="text" value="0">
-                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + min_price + `
+                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + that.int_to_commas(min_price) + `
 											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
                                             <p class="MuiTypography-root MuiDialogContentText-root textography-body1 MuiTypography-colorTextSecondary"></p>
                                             <input id="price" type="text" value="0">
@@ -252,8 +252,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, data, id, itemID, inven
     let price_changed = false;
     let amount_changed = false;
     let update_ui = setInterval(() => {
-
-    that.update_prices_popup(that, price_changed, amount_changed);
+        that.update_prices_popup(that, price_changed, amount_changed);
         price_changed = true;
 		amount_changed = true;
     }, that.update_ui_rate);
