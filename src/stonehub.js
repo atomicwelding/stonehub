@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         Stonehub-dev
+// @name         Stonehub
 // @namespace    http://tampermonkey.net/
 // @version      1.1
 // @description  small improvements for idlescape's marketplace
-// @author       weld, gamergeo, chrOn0os
+// @author       weld, gamergeo, chrOn0os, godi
 // @match        https://idlescape.com/game*
 // @run-at       document-start
 // @grant        none
@@ -33,6 +33,7 @@ class Stonehub {
 
         this.socket_latency     = 2000;
         this.auto_refresh_time  = 1000;
+        this.auto_refresh_auction_time  = 5000;
 
         this.sockets = [];
 
@@ -49,7 +50,7 @@ class Stonehub {
         this.latest_watched_itemID = -1;
 
         this.waiting_timeout = 500;
-        this.max_update_iter = 1000;
+        this.waiting_timeout_short = 50;
 
     }
 
@@ -106,7 +107,7 @@ class Stonehub {
                 if(that.sockets.length != 0){
                     //if it triggers the socket, listen to message
                     that.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
-                    
+
                     // display a logo
                     setTimeout(() => {
                         var usersOnlineDiv = document.getElementById("usersOnline");
@@ -162,22 +163,7 @@ Stonehub.prototype.convenients_marketplace_items_action = function(that, data){
     },  that.auto_refresh_time);
 }
 
-/**
- * Retrieving min price before calling popup
- */
-Stonehub.prototype.prepare_popup_sell_item = function(that, order_data) {
-
-	/**
-	 *  Waiting for actual min price to be retrieved
-	 */
-	that.waiting_min_price(that, order_data.itemID)
-        .then((price) => {that.show_popup_sell_item(that, order_data, price)})
-		.catch((e) => {
-		 that.error_handler(that, e);
-		 that.show_popup_sell_item(that, order_data,-1);});
-}
-
-Stonehub.prototype.show_popup_sell_item = function(that, order_data, min_price) {
+Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
 
     let id = order_data.id;
     let itemID = order_data.itemID;
@@ -200,7 +186,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data, min_price) 
                                         <div class="MuiDialogContent-root">
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">How many do you want to sell?</p>
                                             <input id="amount" type="text" value="`+initial_amount+`">
-                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: ` + that.int_to_commas(min_price) + `
+                                            <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">Price per item you wish to sell<br><span id="lowest-price">Current lowest price on market: <span id="min_price` + itemID + `">0</span>
 											<img src="/images/gold_coin.png" alt="Gold coins" class="icon10"></span></p>
                                             <p class="MuiTypography-root MuiDialogContentText-root textography-body1 MuiTypography-colorTextSecondary"></p>
                                             <input id="price" type="text" value="`+ initial_price + `">
@@ -217,11 +203,24 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data, min_price) 
                                 </div>` ;
 
     let modify_auction_popup = document.createElement('div');
-    modify_auction_popup.id  = 'modify_auction_popup';
+    modify_auction_popup.id = 'modify_auction_popup';
     modify_auction_popup.innerHTML = modify_auction_popup_html;
 
     let body = document.getElementsByTagName('body')[0];
     body.appendChild(modify_auction_popup);
+
+    /**
+     * Retrieving the min price and setting correct fields
+     */
+	that.waiting_min_price(that, order_data.itemID)
+        .then((min_price) => {
+        console.log(itemID);
+            if (document.getElementById('min_price' + itemID) != null) {
+                console.log("Ici");
+                document.getElementById('min_price' + itemID).innerHTML = that.int_to_commas(min_price);
+                document.getElementById('min_price_button').addEventListener('click', () => {document.getElementById('price').value = min_price - 1;});
+            }
+        }).catch((e) => {});
 
     // smoother ui, add commas to numbers
     let price_changed = false;
@@ -253,10 +252,6 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data, min_price) 
         that.clean_popup(that);
         price_changed = false;
         amount_changed = false;
-    });
-
-     document.getElementById('min_price_button').addEventListener('click', () => {
-		document.getElementById('price').value = min_price - 1;
     });
 
     document.getElementById('close_button').addEventListener('click', () => {
@@ -353,13 +348,13 @@ Stonehub.prototype.waiting_min_price = function(that, raw_item_id) {
             if(that.raw_item_id == raw_item_id)
                 resolve(that.min_price);
             else {
-                if(c >= that.waiting_timeout)
+                if(c >= that.waiting_timeout_short)
                     reject(new Error('timeout waiting to retrieve min price'));
                 else
                     setTimeout(check, that.waiting_timeout);
             }
 
-        }, that.waiting_timeout);
+        }, that.waiting_timeout_short);
     });
 }
 
@@ -373,13 +368,6 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
      *      Button added for further features
      *      Autorefresh when someone bought the item
      */
-
-    // ==== AUTOREFRESH ==== //
-    setTimeout(() => {
-        let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
-        if(crafting_table_exists.length != 0)
-            that.sockets[0].send('42["get player auctions",[]]');
-    },  that.auto_refresh_time);
 
     // ==== STONE BUTTON ==== //
     let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tbody')[0].getElementsByTagName('tr');
@@ -403,10 +391,20 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
 
         // listener, popup
         modify_auction_button.addEventListener('click', () => {
-            that.prepare_popup_sell_item(that, data[index]);
+            that.show_popup_sell_item(that, data[index]);
         });
         element.appendChild(modify_auction_button);
     });
+
+
+    if(document.getElementsByClassName('crafting-table marketplace-table').length != 0) {
+        // ==== AUTOREFRESH ==== //
+        setTimeout(() => {
+            let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
+            if(crafting_table_exists.length != 0)
+                that.sockets[0].send('42["get player auctions",[]]');
+        },  that.auto_refresh_auction_time);
+    }
 }
 
 /**
