@@ -360,7 +360,7 @@ Stonehub.prototype.waiting_min_price = function(that, raw_item_id) {
                 if(c >= that.waiting_timeout_short)
                     reject(new Error('timeout waiting to retrieve min price'));
                 else
-                    setTimeout(check, that.waiting_timeout);
+                    setTimeout(check, that.waiting_timeout_short);
             }
 
         }, that.waiting_timeout_short);
