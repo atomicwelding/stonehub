@@ -194,9 +194,9 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
                                             <div id='min_price_button_ok' style="display:none" variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Adapt price</div>
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: <span id='benefits'>0</span> <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : <span id='fees'>0</span>  <img src="/images/gold_coin.png" alt="" class="icon16"></p>
                                         </div>
-                                        <div class="MuiDialogActions-root MuiDialogActions-spacing">
-                                            <div id='close_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Close</div>
-                                            <div id='sell_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-green">Sell</div>
+                                        <div id="test" class="MuiDialogActions-root MuiDialogActions-spacing">
+                                            <div id='close_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Close </div>
+                                            <div id='sell_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-green">Sell </div>
                                         </div>
                                     </div>
                                     </div>
@@ -207,8 +207,33 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
     modify_auction_popup.id = 'modify_auction_popup';
     modify_auction_popup.innerHTML = modify_auction_popup_html;
 
+    // Some CSS styles are not imported. We need to reimplet it
+    var style = document.createElement('style');
+    style.innerHTML = `.MuiDialogActions-root {
+                             flex: 0 0 auto;
+                             display: flex;
+                             padding: 8px;
+                             align-items: center;
+                             justify-content: flex-end;
+                       }
+
+                       .MuiDialogActions-spacing {
+                             margin-left: 0!important;
+                       }
+
+                       .MuiDialogActions-spacing > :not(:first-child) {
+                             margin-left: 8px;
+                       }`;
+
+    modify_auction_popup.appendChild(style)
+
     let body = document.getElementsByTagName('body')[0];
     body.appendChild(modify_auction_popup);
+
+   // document.getElementById('test').classList.add("MuiDialogActions-root");
+
+
+    let cssTyle = ``
 
     let min_price = -1;
 
