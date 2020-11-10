@@ -194,7 +194,7 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
                                             <div id='min_price_button_ok' style="display:none" variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Adapt price</div>
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: <span id='benefits'>0</span> <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : <span id='fees'>0</span>  <img src="/images/gold_coin.png" alt="" class="icon16"></p>
                                         </div>
-                                        <div id="test" class="MuiDialogActions-root MuiDialogActions-spacing">
+                                        <div class="MuiDialogActions-root MuiDialogActions-spacing">
                                             <div id='close_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Close </div>
                                             <div id='sell_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-green">Sell </div>
                                         </div>
@@ -229,11 +229,6 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
 
     let body = document.getElementsByTagName('body')[0];
     body.appendChild(modify_auction_popup);
-
-   // document.getElementById('test').classList.add("MuiDialogActions-root");
-
-
-    let cssTyle = ``
 
     let min_price = -1;
 
