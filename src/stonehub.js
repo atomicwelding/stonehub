@@ -49,8 +49,8 @@ class Stonehub {
 
         this.latest_watched_itemID = -1;
 
-        this.waiting_timeout = 500;
-        this.waiting_timeout_short = 50;
+        this.NUMBER_ATTEMPT = 1000;
+        this.WAITING_TIMEOUT = 50;
 
     }
 
@@ -104,7 +104,6 @@ class Stonehub {
              * A listener is created to catch messages emitted by the server through the websocket.
              */
             try{
-                console.log(that.sockets);
                 if(that.sockets.length != 0){
                     //if it triggers the socket, listen to message
                     that.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
@@ -350,13 +349,13 @@ Stonehub.prototype.waiting_inventory_update = function(that, itemID) {
             if(that.itemID == itemID)
                 resolve(that.inventory_item_id);
             else {
-                if(c >= that.waiting_timeout)
+                if(c >= that.NUMBER_ATTEMPT)
                     reject(new Error('timeout waiting to update inventory'));
                 else
-                    setTimeout(check, that.waiting_timeout);
+                    setTimeout(check, that.WAITING_TIMEOUT);
             }
 
-        }, that.waiting_timeout);
+        }, that.WAITING_TIMEOUT);
     });
 }
 
@@ -378,13 +377,13 @@ Stonehub.prototype.waiting_min_price = function(that, raw_item_id) {
             if(that.raw_item_id == raw_item_id)
                 resolve(that.min_price);
             else {
-                if(c >= that.waiting_timeout_short)
+                if(c >= that.NUMBER_ATTEMPT)
                     reject(new Error('timeout waiting to retrieve min price'));
                 else
-                    setTimeout(check, that.waiting_timeout_short);
+                    setTimeout(check, that.WAITING_TIMEOUT);
             }
 
-        }, that.waiting_timeout_short);
+        }, that.WAITING_TIMEOUT);
     });
 }
 
@@ -398,6 +397,14 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
      *      Button added for further features
      *      Autorefresh when someone bought the item
      */
+    if(document.getElementsByClassName('crafting-table marketplace-table').length != 0) {
+        // ==== AUTOREFRESH ==== //
+        setTimeout(() => {
+            let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
+            if(crafting_table_exists.length != 0)
+                that.sockets[0].send('42["get player auctions",[]]');
+        },  that.auto_refresh_auction_time);
+    }
 
     // ==== STONE BUTTON ==== //
     let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tbody')[0].getElementsByTagName('tr');
@@ -425,6 +432,8 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
         });
         element.appendChild(modify_auction_button);
     });
+
+
 }
 
 /**
