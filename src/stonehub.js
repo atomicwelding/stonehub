@@ -29,7 +29,9 @@ class Stonehub {
         };
 
         // some macros
+        this.extension_id = 'stonehub'
         this.stonehub_version = "V1.1.1";
+        this.status_refresh_time = 5000;
 
         this.socket_latency     = 2000;
         this.auto_refresh_time  = 1000;
@@ -51,6 +53,12 @@ class Stonehub {
 
         this.NUMBER_ATTEMPT = 1000;
         this.WAITING_TIMEOUT = 50;
+
+        this.status_div;
+        this.activated_extensions = {
+            'stonehub':false,
+            'updateui':false
+        };
 
     }
 
@@ -98,6 +106,10 @@ class Stonehub {
             return socket;
         };
 
+        that.set_status(that);
+        // update status
+        that.retrieve_status_div(that);
+
         // better idea than timeout? "(sockets != null || timeout(100))"
         setTimeout(() => {
             /**
@@ -126,13 +138,49 @@ class Stonehub {
     }
 }
 
+Stonehub.prototype.create_status_div = function(that) {
+    /**
+     * <div id='stonehub_status'></div>
+     */
+    const sdiv = document.createElement('div');
+    sdiv.id = 'stonehub_status';
+    sdiv.style.display = 'none';
+    document.body.appendChild(sdiv);
+    return document.getElementById('stonehub_status');
+}
+
+Stonehub.prototype.set_status = function(that) {
+    if(!that.activated_extensions.stonehub){
+        that.status_div = that.status_div ?? that.create_status_div(that);
+        let ext_status = document.createElement('div');
+        ext_status.id = that.extension_id;
+        that.status_div.appendChild(ext_status);
+    }
+}
+
+Stonehub.prototype.retrieve_status_div = function(that) {
+    /**
+     * Checks inside <div id='stonehub_status'></div> which script is activated
+     * and update its state inside this.activated_extensions
+     */
+    setInterval(() => {    
+        that.status_div = that.status_div ?? that.create_status_div(that);
+        [...that.status_div.children].forEach(ext =>{
+            that.activated_extensions[ext.id] = true;
+        });
+        console.log(that.activated_extensions);
+    }, that.status_refresh_time);
+}
+
 
 Stonehub.prototype.int_to_commas = function(x) {
     // src https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+    // 10100 into 10,100
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 Stonehub.prototype.commas_to_int = function(s) {
+    // 10,100 into 10100
     let result;
     if(typeof s == 'number')
   	    result = s
@@ -460,4 +508,7 @@ Stonehub.prototype.clean_auctions = function() {
 
 try {
     let sh = new Stonehub(); sh.start();
-} catch(e) {that.error_handler(that, e);}
+} catch(e) {new Stonehub().error_handler(that, e);}
+
+
+
