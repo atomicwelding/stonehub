@@ -104,6 +104,7 @@ class Stonehub {
              * A listener is created to catch messages emitted by the server through the websocket.
              */
             try{
+                console.log(that.sockets);
                 if(that.sockets.length != 0){
                     //if it triggers the socket, listen to message
                     that.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
@@ -424,16 +425,6 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
         });
         element.appendChild(modify_auction_button);
     });
-
-
-    if(document.getElementsByClassName('crafting-table marketplace-table').length != 0) {
-        // ==== AUTOREFRESH ==== //
-        setTimeout(() => {
-            let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
-            if(crafting_table_exists.length != 0)
-                that.sockets[0].send('42["get player auctions",[]]');
-        },  that.auto_refresh_auction_time);
-    }
 }
 
 /**
