@@ -29,7 +29,9 @@ class Stonehub {
         };
 
         // some macros
+        this.extension_id = 'stonehub'
         this.stonehub_version = "V1.1.1";
+        this.status_refresh_time = 5000;
 
         this.socket_latency     = 2000;
         this.auto_refresh_time  = 1000;
@@ -49,8 +51,14 @@ class Stonehub {
 
         this.latest_watched_itemID = -1;
 
-        this.waiting_timeout = 500;
-        this.waiting_timeout_short = 50;
+        this.NUMBER_ATTEMPT = 1000;
+        this.WAITING_TIMEOUT = 50;
+
+        this.status_div;
+        this.activated_extensions = {
+            'stonehub':false,
+            'updateui':false
+        };
 
     }
 
@@ -98,6 +106,16 @@ class Stonehub {
             return socket;
         };
 
+        // wait for loading to complete, then check which ext is activated
+        let page_ready = setInterval(() =>{
+            if(document.readyState == 'complete'){
+                clearInterval(page_ready);
+                that.set_status(that);
+                that.retrieve_status_div(that)
+            }
+            ;
+        }, 200);
+
         // better idea than timeout? "(sockets != null || timeout(100))"
         setTimeout(() => {
             /**
@@ -126,13 +144,49 @@ class Stonehub {
     }
 }
 
+Stonehub.prototype.create_status_div = function(that) {
+    /**
+     * <div id='stonehub_status'></div>
+     */
+    const sdiv = document.createElement('div');
+    sdiv.id = 'stonehub_status';
+    sdiv.style.display = 'none';
+    document.body.appendChild(sdiv);
+    return document.getElementById('stonehub_status');
+}
+
+Stonehub.prototype.set_status = function(that) {
+    if(!that.activated_extensions.stonehub){
+        that.status_div = that.status_div ?? that.create_status_div(that);
+        let ext_status = document.createElement('div');
+        ext_status.id = that.extension_id;
+        that.status_div.appendChild(ext_status);
+    }
+}
+
+Stonehub.prototype.retrieve_status_div = function(that) {
+    /**
+     * Checks inside <div id='stonehub_status'></div> which script is activated
+     * and update its state inside this.activated_extensions
+     */
+    setInterval(() => {    
+        that.status_div = that.status_div ?? that.create_status_div(that);
+        [...that.status_div.children].forEach(ext =>{
+            that.activated_extensions[ext.id] = true;
+        });
+        //console.log(that.activated_extensions);
+    }, that.status_refresh_time);
+}
+
 
 Stonehub.prototype.int_to_commas = function(x) {
     // src https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+    // 10100 into 10,100
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 Stonehub.prototype.commas_to_int = function(s) {
+    // 10,100 into 10100
     let result;
     if(typeof s == 'number')
   	    result = s
@@ -195,8 +249,8 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
                                             <p class="MuiTypography-root MuiDialogContentText-root MuiTypography-body1 MuiTypography-colorTextSecondary">You will receive: <span id='benefits'>0</span> <img src="/images/gold_coin.png" alt="" class="icon16"> <br>After the fee of : <span id='fees'>0</span>  <img src="/images/gold_coin.png" alt="" class="icon16"></p>
                                         </div>
                                         <div class="MuiDialogActions-root MuiDialogActions-spacing">
-                                            <div id='close_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Close</div>
-                                            <div id='sell_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-green">Sell</div>
+                                            <div id='close_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-red">Close </div>
+                                            <div id='sell_button' variant="contained" color="secondary" class="item-dialogue-button idlescape-button idlescape-button-green">Sell </div>
                                         </div>
                                     </div>
                                     </div>
@@ -206,6 +260,26 @@ Stonehub.prototype.show_popup_sell_item = function(that, order_data) {
     let modify_auction_popup = document.createElement('div');
     modify_auction_popup.id = 'modify_auction_popup';
     modify_auction_popup.innerHTML = modify_auction_popup_html;
+
+    // Some CSS styles are not imported. We need to reimplet it
+    var style = document.createElement('style');
+    style.innerHTML = `.MuiDialogActions-root {
+                             flex: 0 0 auto;
+                             display: flex;
+                             padding: 8px;
+                             align-items: center;
+                             justify-content: flex-end;
+                       }
+
+                       .MuiDialogActions-spacing {
+                             margin-left: 0!important;
+                       }
+
+                       .MuiDialogActions-spacing > :not(:first-child) {
+                             margin-left: 8px;
+                       }`;
+
+    modify_auction_popup.appendChild(style)
 
     let body = document.getElementsByTagName('body')[0];
     body.appendChild(modify_auction_popup);
@@ -329,13 +403,13 @@ Stonehub.prototype.waiting_inventory_update = function(that, itemID) {
             if(that.itemID == itemID)
                 resolve(that.inventory_item_id);
             else {
-                if(c >= that.waiting_timeout)
+                if(c >= that.NUMBER_ATTEMPT)
                     reject(new Error('timeout waiting to update inventory'));
                 else
-                    setTimeout(check, that.waiting_timeout);
+                    setTimeout(check, that.WAITING_TIMEOUT);
             }
 
-        }, that.waiting_timeout);
+        }, that.WAITING_TIMEOUT);
     });
 }
 
@@ -357,13 +431,13 @@ Stonehub.prototype.waiting_min_price = function(that, raw_item_id) {
             if(that.raw_item_id == raw_item_id)
                 resolve(that.min_price);
             else {
-                if(c >= that.waiting_timeout_short)
+                if(c >= that.NUMBER_ATTEMPT)
                     reject(new Error('timeout waiting to retrieve min price'));
                 else
-                    setTimeout(check, that.waiting_timeout_short);
+                    setTimeout(check, that.WAITING_TIMEOUT);
             }
 
-        }, that.waiting_timeout_short);
+        }, that.WAITING_TIMEOUT);
     });
 }
 
@@ -377,6 +451,14 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
      *      Button added for further features
      *      Autorefresh when someone bought the item
      */
+    if(document.getElementsByClassName('crafting-table marketplace-table').length != 0) {
+        // ==== AUTOREFRESH ==== //
+        setTimeout(() => {
+            let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
+            if(crafting_table_exists.length != 0)
+                that.sockets[0].send('42["get player auctions",[]]');
+        },  that.auto_refresh_auction_time);
+    }
 
     // ==== STONE BUTTON ==== //
     let auction_table_tbody = document.getElementsByClassName('marketplace-my-auctions')[0].getElementsByTagName('tbody')[0].getElementsByTagName('tr');
@@ -406,14 +488,6 @@ Stonehub.prototype.convenients_sell_item_action = function(that, data) {
     });
 
 
-    if(document.getElementsByClassName('crafting-table marketplace-table').length != 0) {
-        // ==== AUTOREFRESH ==== //
-        setTimeout(() => {
-            let crafting_table_exists = document.getElementsByClassName('crafting-table marketplace-table');
-            if(crafting_table_exists.length != 0)
-                that.sockets[0].send('42["get player auctions",[]]');
-        },  that.auto_refresh_auction_time);
-    }
 }
 
 /**
@@ -440,4 +514,7 @@ Stonehub.prototype.clean_auctions = function() {
 
 try {
     let sh = new Stonehub(); sh.start();
-} catch(e) {that.error_handler(that, e);}
+} catch(e) {new Stonehub().error_handler(that, e);}
+
+
+
