@@ -106,9 +106,15 @@ class Stonehub {
             return socket;
         };
 
-        that.set_status(that);
-        // update status
-        that.retrieve_status_div(that);
+        // wait for loading to complete, then check which ext is activated
+        let page_ready = setInterval(() =>{
+            if(document.readyState == 'complete'){
+                clearInterval(page_ready);
+                that.set_status(that);
+                that.retrieve_status_div(that)
+            }
+            ;
+        }, 200);
 
         // better idea than timeout? "(sockets != null || timeout(100))"
         setTimeout(() => {
@@ -168,7 +174,7 @@ Stonehub.prototype.retrieve_status_div = function(that) {
         [...that.status_div.children].forEach(ext =>{
             that.activated_extensions[ext.id] = true;
         });
-        console.log(that.activated_extensions);
+        //console.log(that.activated_extensions);
     }, that.status_refresh_time);
 }
 
