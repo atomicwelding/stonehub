@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Stonehub
 // @namespace    http://tampermonkey.net/
-// @version      1.1.2
+// @version      1.1.3
 // @description  small improvements for idlescape's marketplace
 // @author       weld, gamergeo, chrOn0os, godi
 // @match        https://idlescape.com/game*
@@ -30,7 +30,7 @@ class Stonehub {
 
         // some macros
         this.extension_id = 'stonehub'
-        this.stonehub_version = "V1.1.2";
+        this.stonehub_version = "V1.1.3";
         this.status_refresh_time = 5000;
 
         this.socket_latency     = 2000;
@@ -106,41 +106,32 @@ class Stonehub {
             return socket;
         };
 
-        // wait for loading to complete, then check which ext is activated
+        // wait for loading to complete, then check which ext is activated and call the main handler
         let page_ready = setInterval(() =>{
             if(document.readyState == 'complete'){
                 clearInterval(page_ready);
                 that.set_status(that);
                 that.retrieve_status_div(that)
+                try{
+                    if(that.sockets.length != 0){
+                        //if it triggers the socket, listen to message
+                        that.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
+    
+                        // display a logo
+                        setTimeout(() => {
+                            var usersOnlineDiv = document.getElementById("usersOnline");
+                            var spantext = document.createElement('span');
+                            spantext.setAttribute("style","color:#54FF9F;text-shadow: 1px 1px 10px #39c70d;background-image:url(https://static.cracked.to/images/bg1.gif);");
+                            spantext.appendChild(document.createTextNode(" | Stonehub " + that.stonehub_version));
+                            usersOnlineDiv.appendChild(spantext);
+                        },  that.socket_latency);
+                    }
+                    else
+                        throw new Error('socket not initialized');
+                } catch(e) {that.error_handler(that, e);}
             }
             ;
         }, 200);
-
-        // better idea than timeout? "(sockets != null || timeout(100))"
-        setTimeout(() => {
-            /**
-             * A listener is created to catch messages emitted by the server through the websocket.
-             */
-            try{
-                if(that.sockets.length != 0){
-                    //if it triggers the socket, listen to message
-                    that.sockets[0].addEventListener('message', (e) => this.message_handler(that, e));
-
-                    // display a logo
-                    setTimeout(() => {
-                        var usersOnlineDiv = document.getElementById("usersOnline");
-                        var spantext = document.createElement('span');
-                        spantext.setAttribute("style","color:#54FF9F;text-shadow: 1px 1px 10px #39c70d;background-image:url(https://static.cracked.to/images/bg1.gif);");
-                        spantext.appendChild(document.createTextNode(" | Stonehub " + that.stonehub_version));
-                        usersOnlineDiv.appendChild(spantext);
-                    },  that.socket_latency);
-                }
-                else
-                    throw new Error('socket not initialized');
-            } catch(e) {that.error_handler(that, e);}
-
-
-        },  that.socket_latency);
     }
 }
 
