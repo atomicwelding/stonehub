@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Stonehub
 // @namespace    http://tampermonkey.net/
-// @version      1.2.0
+// @version      1.2.1
 // @description  small improvements for idlescape's marketplace
 // @author       weld, gamergeo, chrOn0os, godi
-// @match        https://idlescape.com/game*
+// @include      *://*idlescape.com/game*
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
