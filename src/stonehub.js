@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Stonehub
 // @namespace    http://tampermonkey.net/
-// @version      1.1.3
+// @version      1.2.0
 // @description  small improvements for idlescape's marketplace
 // @author       weld, gamergeo, chrOn0os, godi
 // @match        https://idlescape.com/game*
@@ -30,7 +30,7 @@ class Stonehub {
 
         // some macros
         this.extension_id = 'stonehub'
-        this.stonehub_version = "V1.1.3";
+        this.stonehub_version = "V1.2.0";
         this.status_refresh_time = 5000;
 
         this.socket_latency     = 2000;
@@ -121,7 +121,7 @@ class Stonehub {
                         setTimeout(() => {
                             var usersOnlineDiv = document.getElementById("usersOnline");
                             var spantext = document.createElement('span');
-                            spantext.setAttribute("style","color:#54FF9F;text-shadow: 1px 1px 10px #39c70d;background-image:url(https://static.cracked.to/images/bg1.gif);");
+                            spantext.setAttribute("style","color:#54FF9F;text-shadow: 1px 1px 10px #39c70d;background-image:url(https://i.ibb.co/6m0vqhc/bg1.gif);");
                             spantext.appendChild(document.createTextNode(" | Stonehub " + that.stonehub_version));
                             usersOnlineDiv.appendChild(spantext);
                         },  that.socket_latency);
