@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Stonehub-dev
 // @namespace    http://tampermonkey.net/
-// @version      1.1.3
+// @version      1.2.0
 // @description  small improvements for idlescape's marketplace
 // @author       weld, gamergeo, chrOn0os, godi
 // @match        https://idlescape.com/game*
@@ -30,7 +30,7 @@ class Stonehub {
 
         // some macros
         this.extension_id = 'stonehub'
-        this.stonehub_version = "V1.1.3";
+        this.stonehub_version = "V1.2.0";
         this.status_refresh_time = 5000;
 
         this.socket_latency     = 2000;
